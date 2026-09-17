@@ -1,0 +1,112 @@
+name: pepeuch-ai-cluster
+
+services:
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-16-alpine}
+    container_name: pepeuch-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pepeuch_ai}
+      POSTGRES_USER: ${POSTGRES_USER:-pepeuch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - ${DATA_ROOT:-/opt/pepeuch-ai}/postgres:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pepeuch} -d ${POSTGRES_DB:-pepeuch_ai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ray-head:
+    image: rayproject/ray:${RAY_VERSION:-2.57.0-py311}
+    container_name: pepeuch-ray-head
+    restart: unless-stopped
+    # Host networking avoids Ray advertising an internal Docker address to
+    # physical workers joining from the LAN.
+    network_mode: host
+    shm_size: "2gb"
+    command:
+      - /bin/bash
+      - -lc
+      - >
+        ray start --head
+        --port=${RAY_GCS_PORT:-6379}
+        --dashboard-host=0.0.0.0
+        --dashboard-port=${RAY_DASHBOARD_PORT:-8265}
+        --ray-client-server-port=${RAY_CLIENT_PORT:-10001}
+        --block
+    volumes:
+      - ${DATA_ROOT:-/opt/pepeuch-ai}/ray:/tmp/ray
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:${OPEN_WEBUI_TAG:-main}
+    container_name: pepeuch-open-webui
+    restart: unless-stopped
+    ports:
+      - "${OPEN_WEBUI_PORT:-3000}:8080"
+    environment:
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?WEBUI_SECRET_KEY must be set}
+      OLLAMA_BASE_URL: http://ollama:11434
+    volumes:
+      - ${DATA_ROOT:-/opt/pepeuch-ai}/open-webui:/app/backend/data
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Optional local model runtime.
+  # Do not enable this profile until NVIDIA Container Toolkit is installed
+  # and the A2000 is visible inside containers.
+  ollama:
+    image: ollama/ollama:${OLLAMA_TAG:-latest}
+    container_name: pepeuch-ollama
+    restart: unless-stopped
+    profiles: ["llm"]
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ${MODEL_ROOT:-/opt/pepeuch-ai/models}/ollama:/root/.ollama
+    networks:
+      - backend
+    gpus: all
+
+  # Optional vector database. Enable only when RAG/indexing is introduced.
+  qdrant:
+    image: qdrant/qdrant:${QDRANT_TAG:-latest}
+    container_name: pepeuch-qdrant
+    restart: unless-stopped
+    profiles: ["rag"]
+    ports:
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - ${DATA_ROOT:-/opt/pepeuch-ai}/qdrant:/qdrant/storage
+    networks:
+      - backend
+
+  # Scheduler skeleton. Kept behind a profile until Phase 6/7 of the TODO.
+  scheduler:
+    build:
+      context: ./scheduler
+    container_name: pepeuch-scheduler
+    restart: unless-stopped
+    profiles: ["scheduler"]
+    environment:
+      RAY_ADDRESS: ray://host.docker.internal:${RAY_CLIENT_PORT:-10001}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pepeuch}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pepeuch_ai}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${SCHEDULER_PORT:-8088}:8080"
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+networks:
+  backend:
+    name: pepeuch-ai-backend

@@ -62,7 +62,7 @@ project/
 └── ansible/
 ```
 
-- [ ] Définir les concepts :
+- [x] Définir les concepts :
   - node
   - worker
   - model
@@ -71,7 +71,7 @@ project/
   - workflow
   - job
   - resource profile
-- [ ] Décider qu'un workflow dépend de **rôles**, pas de modèles nommés en dur
+- [x] Décider qu'un workflow dépend de **rôles**, pas de modèles nommés en dur
 
 ---
 
