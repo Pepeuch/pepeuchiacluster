@@ -1,0 +1,14 @@
+version: 1
+
+selection:
+  prefer_local: true
+  prefer_free: true
+  prefer_measured_performance: true
+  prefer_nvidia_optimized: true
+
+remote_fallback:
+  enabled: true
+  require_approval_if_paid: true
+
+safety:
+  destructive_actions_require_human_approval: true

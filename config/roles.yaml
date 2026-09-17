@@ -1,0 +1,38 @@
+version: 1
+
+roles:
+  filesystem-classification:
+    mode: persistent
+  filesystem-embedding:
+    mode: persistent
+  media-vision:
+    mode: persistent
+  media-embedding:
+    mode: persistent
+  infra-monitoring:
+    mode: persistent
+  infra-log-analysis:
+    mode: persistent
+  repo-light-review:
+    mode: persistent
+  repo-indexing:
+    mode: persistent
+  business-admin-assist:
+    mode: persistent
+
+  infra-deep-analysis:
+    mode: on-demand
+  repo-heavy-audit:
+    mode: on-demand
+  pcb-schematic:
+    mode: on-demand
+  pcb-analysis:
+    mode: on-demand
+  pcb-placement:
+    mode: on-demand
+  pcb-routing:
+    mode: on-demand
+  pcb-review:
+    mode: on-demand
+  cad-assist:
+    mode: on-demand
