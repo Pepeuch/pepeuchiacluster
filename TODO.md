@@ -102,31 +102,78 @@ OpenAI / Mistral / autres providers
 
 ## À adapter à la v2
 
-- [ ] Réorganiser le repository selon la nouvelle architecture
-- [ ] Déplacer les anciens fichiers utiles
-- [ ] Archiver les prototypes devenus obsolètes
-- [ ] Mettre à jour README et architecture
-- [ ] Remplacer l'ancienne TODO par cette TODO v4
+- [x] Réorganiser le repository selon la nouvelle architecture
+- [x] Déplacer les anciens fichiers utiles
+- [x] Archiver les prototypes devenus obsolètes
+- [x] Mettre à jour README et architecture
+- [x] Remplacer l'ancienne TODO par cette TODO v4
 
 ---
 
 # Phase 1 — Infrastructure minimale du serveur
 
 - [ ] Créer la VM via le script Proxmox
-- [ ] Vérifier réseau / stockage / SSH
+- [x] Vérifier réseau / stockage / SSH
 - [ ] Passer la RTX A2000 en passthrough
 - [ ] Vérifier `lspci`
 - [ ] Installer le driver NVIDIA
 - [ ] Vérifier `nvidia-smi`
 - [ ] Installer NVIDIA Container Toolkit
 - [ ] Vérifier le GPU depuis Docker
-- [ ] Installer / valider Docker Compose
-- [ ] Créer `/opt/pepeuch-ai`
+- [x] Installer / valider Docker Compose
+- [x] Créer `/opt/pepeuch-ai`
 - [ ] Définir volumes persistants
 - [ ] Définir sauvegarde de la VM
 - [ ] Ajouter healthchecks de base
 
+**Checkpoint VM 150 — 27 octobre 2026**
+
+- [x] Recycler manuellement la VM 150 en nœud `pepeuchai` (Debian 13 minimal) ; le script de création Proxmox reste à valider séparément.
+- [x] Installer Docker Engine 29.9.2, Compose v5.6.1 ; `hello-world` réussi, service actif et activé au démarrage.
+- [x] Préparer `/opt/pepeuch-ai/{repo,config,data,logs,backups}`.
+- [x] Créer le volume Docker `pepeuch-ai-poc_postgres_data` et confirmer la persistance d'une donnée après redémarrage de PostgreSQL.
+- [x] Configurer le stockage persistant SurrealDB/RocksDB (`/opt/pepeuch-ai/data/surreal-poc`) et confirmer les 405 modèles après redémarrage.
+- [x] Corriger le healthcheck SurrealDB (`/surreal is-ready`) ; conteneur `Healthy`.
+- [x] Limiter le cache RocksDB à 512 Mio (`SURREAL_ROCKSDB_BLOCK_CACHE_SIZE=536870912`) et les tampons d'écriture du POC.
+- [ ] Définir et vérifier une sauvegarde/restauration Proxmox de la VM 150 avant d'y stocker des données irremplaçables.
+- [ ] Vérifier les healthchecks de l'ensemble des services (SurrealDB confirmé `Healthy` ; état `healthy` de PostgreSQL encore à confirmer).
+- [ ] Reprendre le passthrough RTX A2000 : échec VFIO/FLR (`stuck in D3`), validation GPU dans la VM reportée ; ne pas bloquer le POC CPU.
+
 **Jalon :** un conteneur Docker peut utiliser correctement l'A2000.
+
+**Checkpoint B3.1 — 27 octobre 2026 (ModelScope POC validé)**
+
+- [x] Créer un adaptateur ModelScope `model_artifact` indépendant de Hugging Face, utilisant le SDK officiel `modelscope-hub==0.4.0`.
+- [x] Valider les métadonnées, identités, licences, restrictions d'accès et valeurs inconnues avec une fixture synthétique et une requête réelle.
+- [x] Exécuter 62/62 tests Python sur la VM.
+- [x] Sonder réellement `Qwen/Qwen3-0.6B` : accès public, licence Apache-2.0, métadonnées normalisées et provenance préservée.
+- [x] Importer le snapshot réel dans PostgreSQL et SurrealDB : 12 ressources par moteur, réimportation idempotente et 405 modèles historiques conservés.
+- [ ] Étendre les sondes à plusieurs modèles et formats ; vérifier les révisions, fichiers, relations et éventuelles restrictions d'accès. L'API sondée ne fournit pas de SHA Git exploitable.
+
+**Checkpoint B3.2 — 27 octobre 2026 (OpenCSG/CSGHub POC validé)**
+
+- [x] Identifier l'API officielle CSGHub et distinguer les dépôts de modèles de la passerelle d'inférence.
+- [x] Développer un adaptateur `model_artifact` indépendant de Hugging Face et ModelScope, avec identité et provenance propres.
+- [x] Valider 76/76 tests Python sur la VM, dont 14 tests spécifiques à CSGHub.
+- [x] Sonder réellement `OpenCSG/csg-wukong-1B` : SHA Git complet, 9 fichiers référencés et format Safetensors observé.
+- [x] Préserver les métadonnées inconnues : licence non vérifiée et autorisation de téléchargement non déduite de la visibilité publique.
+- [x] Importer et réimporter les métadonnées dans PostgreSQL et SurrealDB : 13 ressources par moteur, sans doublon et avec les 405 modèles historiques préservés.
+- [ ] Étendre les sondes à d'autres dépôts et étudier séparément les ressources datasets, spaces, MCP, skills et les modèles servis par l'AI Gateway.
+
+**Checkpoint B3.3 — 27 octobre 2026 (MoArk POC validé sur la VM Debian 13)**
+
+- [x] Étudier l'OpenAPI officielle MoArk et les conditions d'accès ; distinguer Serverless, workflows et dépôts Git/LFS de modèles/datasets.
+- [x] Ajouter un adaptateur `SourceRecord` de type `inference_endpoint`, sans fusion interplateforme ni preuve de poids déduite du catalogue.
+- [x] Valider 91/91 tests Python localement et sur la VM, dont 15 tests MoArk sur fixture synthétique et client HTTP simulé.
+- [x] Sonder réellement `Qwen3-8B` par un GET public anonyme ; conserver timestamp, provenance et inconnues, sans inférence.
+- [x] Valider le snapshot B2 réel et ses imports PostgreSQL/SurrealDB ; voir [MOARK_B3.md](database/poc/MOARK_B3.md).
+- [x] Importer puis réimporter sur la VM : 14 ressources par moteur, réimportation idempotente confirmée et 405 modèles historiques PostgreSQL préservés (résultats VM communiqués par l'utilisateur).
+- [ ] Synchroniser les fichiers locaux non suivis de la VM avec la branche publiée, après comparaison ; voir [la procédure ciblée](database/poc/MOARK_VM_SYNC.md).
+- [ ] Étudier séparément capacités, quotas applicables et dépôts de poids MoArk/Gitee ; aucune association automatique par nom.
+
+Le connecteur est opérationnel pour les métadonnées publiques en lecture seule.
+L'accès réel à l'inférence n'a pas été testé. Le Discovery Service automatisé
+reste à développer ; ces validations portent sur des sondes et imports manuels.
 
 ---
 
@@ -134,8 +181,23 @@ OpenAI / Mistral / autres providers
 
 Objectif : choisir le moteur de données avant de figer le schéma.
 
-- [ ] Faire un POC **PostgreSQL vs SurrealDB**
-- [ ] Importer un échantillon réel de `models.dev`
+**Checkpoint expérimental — 27 octobre 2026**
+
+- [x] Démarrer PostgreSQL 16.15 (`postgres:16-alpine`) via Compose, sur un réseau interne sans port publié.
+- [x] Valider la connexion SQL, l'écriture et la lecture après redémarrage du conteneur.
+- [x] Préparer le schéma `poc.external_models` et l'importeur TOML → SQL/COPY avec provenance Git ; 2 tests PostgreSQL réussis.
+- [x] Analyser les 405 TOML du submodule épinglé : 405 fichiers analysés, aucune erreur.
+- [x] Générer le flux SQL et importer réellement les 405 fiches dans PostgreSQL ; 405 enregistrements confirmés.
+- [x] Vérifier le volume PostgreSQL après recréation du conteneur ; sauvegarde `pg_dump` et restauration dans une base de test vérifiées.
+- [x] Déployer SurrealDB 3.3.4/RocksDB via Compose avec réseau interne, stockage persistant et healthcheck corrigé.
+- [x] Préparer l'importeur TOML → SurrealQL ; 3 tests supplémentaires réussis (5 tests Python au total), 405 `UPSERT` validés et importés.
+- [x] Comparer les six compteurs PostgreSQL/SurrealDB : 405 modèles, 196 open weights, 397 contextes positifs, 8 nuls, 154 poids, 135 benchmarks.
+- [x] Confirmer les 405 modèles SurrealDB après redémarrage ; exporter et restaurer la sauvegarde dans `poc_restore_20261027`.
+- [x] Valider la parité **14/14 requêtes en lecture seule** entre PostgreSQL et SurrealDB, y compris la régression `tool_call` / tool calling (349 modèles) ; ne pas assimiler les temps CLI/Docker à la latence du moteur.
+- [ ] Comparer les moteurs sur les **mêmes requêtes représentatives**, index et mesures de performance ; aucun choix arrêté.
+
+- [ ] Finaliser le POC comparatif **PostgreSQL vs SurrealDB** (performances, graphe, vecteurs et contraintes d'exploitation).
+- [x] Importer un échantillon réel de `models.dev` dans les deux moteurs (ici les 405 TOML du snapshot épinglé).
 - [ ] Tester les requêtes représentatives :
   - modèle → base model → quantification
   - modèle → provider → coût
@@ -144,7 +206,7 @@ Objectif : choisir le moteur de données avant de figer le schéma.
   - modèle → benchmark local
 - [ ] Tester la recherche vectorielle / hybride
 - [ ] Tester relations de graphe et liens typés
-- [ ] Tester sauvegarde / restauration
+- [x] Tester sauvegarde / restauration sur les deux POC, dans des bases distinctes des sources.
 - [ ] Tester Docker et consommation mémoire
 - [ ] Vérifier précisément les contraintes de licence de SurrealDB avant adoption
 - [ ] Décider du moteur principal
@@ -180,24 +242,46 @@ benchmark_cases
 
 Objectif : exploiter les catalogues existants au lieu de reconstruire leur travail.
 
+**Checkpoint B1 / B1.1 — 27 octobre 2026 (contrats et sondes seulement)**
+
+- [x] Définir `SourceRecord` indépendant du moteur de base de données : source, identifiant externe, révision, type logique, attributs, relations explicites et métadonnées brutes.
+- [x] Séparer `model_artifact` (Hugging Face), `agent_resource` (Awesome AI Agents) et `nim_microservice` (NVIDIA NIM) ; aucune identité canonique déduite d'un nom ressemblant.
+- [x] Exécuter **33/33 tests Python** localement et sur la VM pour les contrats B1/B1.1 ; sonde NVIDIA réelle identique sur les deux environnements.
+- [x] Fournir les sondes en lecture seule, sans modifier PostgreSQL/SurrealDB, télécharger de poids ni utiliser de GPU ou de clés privées (`database/poc/probe_source_adapters.py`).
+- [ ] Industrialiser l'ingestion incrémentale (exécution planifiée, reprise sur erreur, rétention, surveillance) ; le POC B2 est une importation **manuelle**, pas encore un Discovery Service en production.
+
+**Checkpoint B2 — 27 octobre 2026 (Discovery Cache POC validé sur la VM)**
+
+- [x] Définir un snapshot JSON indépendant de PostgreSQL/SurrealDB, à identités stables `(source, entity_type, source_id)`, empreintes SHA-256, révisions, horodatages et périmètre de collecte.
+- [x] Fournir les générateurs d'import `COPY`/upsert PostgreSQL et `UPSERT` SurrealDB, sans suppression automatique ni modification des tables historiques.
+- [x] Valider sur la VM **48/48 tests Python**, puis deux imports initiaux à 5 ressources et leur réimportation idempotente (**5/5 dans les deux bases**).
+- [x] Vérifier les comparaisons : même snapshot = **5 inchangées** ; simulation contrôlée = **1 ajoutée, 1 modifiée, 1 non observée, 3 inchangées**. `not_observed` n'autorise aucune suppression.
+- [x] Collecter réellement **11 ressources** de `models.dev` (5), Hugging Face (2), Awesome AI Agents (3) et NVIDIA NIM (1) ; contrôler intégrité et identités ; importer **11/11** dans PostgreSQL et SurrealDB sans toucher aux 405 modèles historiques.
+- [ ] Éprouver les imports partiellement échoués, les changements de révision réels et les variations de périmètre ; conserver les snapshots et définir la politique de rafraîchissement.
+
 ## 3.1 models.dev — source seed principale
 
-- [ ] Ajouter `anomalyco/models.dev` comme **git submodule**
-- [ ] Épingler un commit précis
-- [ ] Enregistrer le SHA de source lors des imports
+- [x] Ajouter `anomalyco/models.dev` comme **git submodule**
+- [x] Épingler un commit précis (`5e9fdbc3d88cb831627a93dc1362cc10773c176c`)
+- [x] Enregistrer le SHA de source lors des imports PostgreSQL et SurrealDB du POC
 - [ ] Exploiter prioritairement :
   - `models.json`
   - `catalog.json`
   - fichiers TOML `models/`
   - fichiers TOML `providers/`
-- [ ] Créer un adapter/importer dédié
+- [ ] Créer un adapter/importer générique et indépendant du moteur de base de données
+- [x] Préparer et valider l'importeur POC PostgreSQL (CSV/COPY + JSONB) ; 405 modèles réellement importés
+- [x] Préparer et valider l'importeur POC SurrealDB (SurrealQL + métadonnées brutes) ; 405 modèles réellement importés
 - [ ] Ne jamais faire dépendre le selector directement de leur format
 - [ ] Détecter les deltas lors des mises à jour du submodule
 - [ ] Conserver licence, provider, prix, contexte, modalités, reasoning, tool calling, structured output, open weights et liens vers poids/benchmarks
 
 ## 3.2 Hugging Face — enrichissement open-weight
 
-- [ ] Utiliser l'API officielle Hugging Face
+- [x] Valider une **sonde publique ciblée** de l'API officielle sur `google/gemma-3-1b-it` (accès manuel, safetensors) et `ggml-org/gemma-3-1b-it-GGUF` (public, GGUF), avec SHA propres à chaque dépôt.
+- [x] Normaliser dans le POC `gated`, licence, architecture, formats détectés, fichiers et relations `base_model` explicitement déclarées ; préserver `unknown` lorsque les métadonnées sont absentes.
+- [ ] Étendre l'adaptateur à tous les champs pertinents ci-dessous, puis l'intégrer à la découverte sélective sans aspirer le Hub.
+- [ ] Intégrer l'API officielle Hugging Face au Discovery Service (au-delà de la sonde B1)
 - [ ] Ne pas aspirer tout le Hub
 - [ ] Enrichir uniquement les candidats intéressants ou les familles utiles
 - [ ] Récupérer :
@@ -221,7 +305,10 @@ Objectif : exploiter les catalogues existants au lieu de reconstruire leur trava
 
 ## 3.3 NVIDIA Developer / NGC — enrichissement matériel
 
-- [ ] Utiliser le compte NVIDIA Developer
+- [x] Valider une lecture **sans compte ni clé** de la NIM Metadata API v1.0.0 : `nim/nvidia/parakeet-1-1b-rnnt-multilingual:1.5.0`, 60 profils, dont 12 GPU-agnostic et 48 ciblant d'autres GPU que l'A2000.
+- [x] Ajouter un contrat `nim_microservice` distinct des modèles et un screening conservateur RTX A2000 `2571:10de` / 12 Go / 1 GPU ; **60 profils sans VRAM minimale publiée**, donc aucun profil déclaré compatible ou validé en exécution.
+- [x] Gérer les champs NVIDIA optionnels (`unknown` ≠ `false`), les futurs champs GPU chaîne/liste, et HTTP 404 comme absence de métadonnées **pour un tag**, non comme conteneur inexistant.
+- [ ] Utiliser le compte NVIDIA Developer pour tester l'accès API hébergée et les droits NGC ; ne jamais versionner de clé (B1.1 est entièrement public et non authentifié).
 - [ ] Ajouter authentification optionnelle NGC
 - [ ] Gérer les niveaux d'accès :
   - public
@@ -250,6 +337,19 @@ Objectif : exploiter les catalogues existants au lieu de reconstruire leur trava
 - [ ] Stocker coût, contexte, capacités, confidentialité et contraintes
 - [ ] Distinguer modèle sous-jacent et provider qui le sert
 
+## Hubs complémentaires à étudier — ModelScope, OpenCSG/CSGHub, MoArk
+
+- [x] **ModelScope (Alibaba), POC B3.1** : adaptateur de métadonnées `model_artifact` et import manuel validés sur un dépôt ciblé, distinct de Hugging Face. L'extension à d'autres modèles, fichiers, datasets, Studios et agents reste à étudier.
+- [x] **OpenCSG / CSGHub, POC modèles B3.2** : API officielle, adaptateur `model_artifact` et import manuel validés sur un dépôt ciblé, sans fusion interplateforme. Les ressources d'agents, datasets, spaces, MCP, skills et l'AI Gateway restent à étudier.
+- [x] **MoArk (OSChina), POC B3.3** : catalogue public qualifié, adaptateur `inference_endpoint` et import manuel validés. L'inférence n'a pas été testée ; les dépôts de poids nécessitent un contrat séparé et une provenance vérifiée.
+- [ ] Tester chaque connecteur sur des fixtures, avec conservation de la provenance, des valeurs inconnues et des limites de quotas ; aucune aspiration globale ni jeton stocké dans Git.
+
+## Catalogue distinct de ressources d'agents (Awesome AI Agents)
+
+- [x] Sonder le JSON officiel au commit épinglé `a32e86f60db8dd9556218403532264e0794822c4` : 305 entrées brutes, **304 IDs uniques**, un doublon strictement identique.
+- [x] Normaliser les `agent_resource` et dédupliquer les doublons identiques ; refuser un même ID associé à des contenus divergents.
+- [ ] Décider quelles ressources d'agents conserver dans un index séparé, sans les mélanger aux modèles d'inférence.
+
 **Jalon :** le système peut importer `models.dev`, enrichir un candidat via Hugging Face et NVIDIA, puis produire une fiche normalisée.
 
 # Phase 3.5 — Discovery Cache & Personal Model Catalog
@@ -258,6 +358,7 @@ Objectif : ne pas transformer la base locale en miroir géant.
 
 ## Discovery Cache
 
+- [x] Valider un **POC d'import mult_sources** dans PostgreSQL et SurrealDB (11 ressources distinctes), avec identité stable et horodatage de dernière observation.
 - [ ] Stocker un index léger des modèles externes vus
 - [ ] Conserver au minimum :
   - external id

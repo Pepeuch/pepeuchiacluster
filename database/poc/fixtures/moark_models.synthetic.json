@@ -1,0 +1,15 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "Qwen3-8B",
+      "object": "model",
+      "created": 1700000000,
+      "owned_by": "synthetic-owner"
+    },
+    {
+      "id": "other-synthetic-model",
+      "object": "model"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "repo_id": "Qwen/Qwen3-0.6B",
+  "owner": "Qwen",
+  "name": "Qwen3-0.6B",
+  "repo_type": "model",
+  "visibility": 5,
+  "gated": false,
+  "license": "apache-2.0",
+  "description": "Synthetic fixture for a read-only repository contract test, not live metadata",
+  "tags": ["text-generation"],
+  "downloads": 42,
+  "likes": 7,
+  "last_modified": null
+}

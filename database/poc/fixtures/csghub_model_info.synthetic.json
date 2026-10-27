@@ -1,0 +1,14 @@
+{
+  "id": "OpenCSG/csg-wukong-1B",
+  "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "private": false,
+  "author": "fictional-test-owner",
+  "created_at": "2026-01-01T00:00:00Z",
+  "last_modified": "2026-01-02T00:00:00Z",
+  "downloads": 7,
+  "likes": 2,
+  "library_name": "safetensors",
+  "pipeline_tag": "text-generation",
+  "tags": ["safetensors", "apache-2.0"],
+  "siblings": [{"rfilename": "config.json"}, {"rfilename": "model.safetensors"}]
+}
