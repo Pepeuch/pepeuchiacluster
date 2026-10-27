@@ -65,4 +65,19 @@ documentées dans [B52_IMPLEMENTATION.md](docs/architecture/B52_IMPLEMENTATION.m
 Une restauration crée de nouvelles clés et conserve les workers révoqués jusqu'à
 leur réactivation explicite. La procédure de
 [validation Debian 13/Python 3.13](docs/architecture/B52_DEBIAN13_VALIDATION.md)
-est préparée sans modification de la VM existante.
+est documentée ; l'utilisateur a depuis confirmé sa réussite sur Debian 13
+(395 tests, livrable vérifié et sauvegarde/restauration). La mission B5.3 n'a
+effectué aucune nouvelle intervention sur cette VM.
+
+## B5.3 — worker CPU autonome, validation OS à poursuivre
+
+Le nouveau point d'entrée `python3 -m pepeuch_worker` utilise son propre répertoire
+privé et un credential worker livré séparément. Une mission CPU explicitement
+approuvée calcule SHA256 du texte UTF-8 de l'objectif, sans IA, GPU, shell ou accès
+aux fichiers backend. La démonstration B5.1/B5.2 garde son point d'entrée.
+
+Le parcours fonctionne en test applicatif explicite. **Le mode strict refuse
+actuellement l'exécution : l'isolation OS est NOT VERIFIED.** Les gabarits systemd
+ne sont pas installés ni activés. Contrats, 443 tests Python et limites dans le
+[journal B5.3](docs/architecture/B53_IMPLEMENTATION.md) ; procédure proposée pour
+une machine distincte autorisée dans le [guide Debian 13](docs/architecture/B53_DEBIAN13_VALIDATION.md).

@@ -272,8 +272,20 @@ reste à développer ; ces validations portent sur des sondes et imports manuels
 - [x] Préparer séparément [l'isolation OS](docs/architecture/WORKER_ISOLATION_B52.md) ; aucun UID, conteneur, montage ou quota CPU/RAM appliqué dans ce lot.
 - [x] B5.2d : 395 tests Python réussis (272 Discovery + 123 Control Plane, dont les 341 initiaux inchangés), scénario Firefox B5.1 rejoué, restauration et anciens formats vérifiés ; voir [B52_IMPLEMENTATION.md](docs/architecture/B52_IMPLEMENTATION.md).
 - [x] Préparer [la validation Debian 13/Python 3.13](docs/architecture/B52_DEBIAN13_VALIDATION.md) sans modifier la VM existante.
-- [ ] Exécuter cette validation dans un environnement distinct autorisé ; aucun succès Debian 13/Python 3.13 annoncé avant essai.
+- [x] Validation B5.2 Debian 13 rapportée terminée par l'utilisateur : Python 3.13.5, SQLite 3.46.1, 395 tests, tunnel SSH, simulation/livrable SHA256 et sauvegarde/restauration avec renouvellement des identifiants. Ce résultat ne valide pas l'isolation OS B5.3.
 - [ ] Avant un vrai worker : isolation OS éprouvée, politiques réseau/outils/enfants, PKI/appairage/TLS et pile HTTP de production ; conserver le prototype sans IA réelle ni découverte LAN.
+
+**Checkpoint B5.3 — 27 octobre 2026 (worker CPU autonome, OS non vérifié)**
+
+- [x] Vérifier `origin/main` publié à `ef5b293ae91132ff0fda0431318b649184e14348`, créer `feat/webui-control-plane-b53` depuis cette base propre ; commits locaux par lot, aucun push/merge B5.3.
+- [x] B5.3a : [contrat versionné](docs/architecture/WORKER_CONTRACT_B53.md), identité cluster distincte UID/GID, capacité CPU fermée, outils vides, déclarations/application/preuves séparées.
+- [x] B5.3b/d : nouveau point d'entrée `python3 -m pepeuch_worker`, racine privée et credential local séparés, aucune dépendance au répertoire backend ; SHA256 du texte UTF-8 approuvé, sans shell, fichier d'entrée, fournisseur, GPU ou IA. CLI historique préservée.
+- [x] Mission CPU explicite et approbation administrative, intention d'exécution versionnée dans l'audit existant ; migrations 1/2 et contrats historiques conservés, résultats durables/epochs/générations B5.2 réutilisés.
+- [x] B5.3e : 443 tests Python réussis (395 historiques inchangés + 48 nouveaux), Firefox B5.1 réussi ; reprise manuelle sans recalcul, pertes de connexion, révocation/rotation, résultats tardifs, sauvegarde/restauration CPU testés.
+- [x] B5.3c/f : gabarit systemd/cgroup v2 et [guide Debian 13](docs/architecture/B53_DEBIAN13_VALIDATION.md) préparés ; syntaxe vérifiée seulement, aucune installation/activation/VM modifiée. [Journal B5.3](docs/architecture/B53_IMPLEMENTATION.md).
+- [ ] Autoriser puis exécuter les tests négatifs OS sur une machine distincte : UID/groupes, secrets/SQLite/objets inaccessibles, FS, réseau, GPU/Docker, CPU/RAM/PID, runtime et arrêt des enfants — **NOT VERIFIED**.
+- [ ] Compléter le vérificateur de confiance et fermer le réseau OS au port backend : `run` strict refuse actuellement toute exécution ; `--application-test` ne valide pas l'isolation, le filtre IP candidat seul autorise tous les ports loopback.
+- [ ] Avant une inférence ou un outil réel : contrat de lecture des versions d'entrée, quotas cumulés I/O/calcul, politique des moteurs/outils, preuves OS et profils Windows/macOS distincts ; conserver AnythingLLM/Open WebUI facultatifs.
 
 # Phase 2 — Choix et POC de la base de données
 

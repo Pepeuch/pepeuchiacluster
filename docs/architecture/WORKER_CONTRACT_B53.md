@@ -106,7 +106,9 @@ OS et n'est pas un mode de déploiement sécurisé.
   vie. Ne pas accepter une attestation JSON arbitraire ou un fichier « approved ».
 - Fermer le réseau au port backend au niveau OS : le filtre IP du gabarit laisse
   tous les ports de `127.0.0.1` accessibles si l'eBPF fonctionne. Le client applicatif
-  fixe un seul port, ce qui constitue une protection distincte.
+  fixe un seul port, ce qui constitue une protection distincte. Un gabarit nftables
+  par UID/port est proposé séparément, sans chargement ni validation noyau ; son
+  expérimentation exige une autorisation spécifique et un compte exclusif.
 - Définir les preuves de ressources, de terminaison et les budgets cumulés I/O +
   calcul avant une charge plus lourde. Ajouter les fichiers d'entrée par un contrat
   API distinct, sans donner de chemin backend au worker.

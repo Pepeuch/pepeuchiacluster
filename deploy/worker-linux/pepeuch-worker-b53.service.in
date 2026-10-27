@@ -1,0 +1,63 @@
+# B5.3 candidate, NOT VERIFIED. Render/review on an authorized test machine.
+# Default strict mode deliberately refuses while mandatory OS proofs are missing.
+# No [Install] section, automatic restart, installation or activation script.
+[Unit]
+Description=Pepeuch manual CPU worker B5.3 (isolation pending validation)
+ConditionPathExists=@WORKER_ROOT@/worker.json
+
+[Service]
+Type=exec
+User=@WORKER_UID@
+Group=@WORKER_GID@
+SupplementaryGroups=
+WorkingDirectory=@CODE_ROOT@
+ExecStart=/usr/bin/python3 -E -s -B -m pepeuch_worker run --worker-dir @WORKER_ROOT@ --credential-file %d/worker.token
+LoadCredential=worker.token:@CREDENTIAL_SOURCE@
+UMask=0077
+Restart=no
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+ReadOnlyPaths=@CODE_ROOT@
+ReadWritePaths=@WORKER_ROOT@
+InaccessiblePaths=@BACKEND_ROOT@ -/run/docker.sock -/var/run/docker.sock -/dev/dri -/dev/nvidia0 -/dev/nvidiactl -/dev/nvidia-uvm
+PrivateTmp=yes
+PrivateDevices=yes
+DevicePolicy=closed
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+# Application pins the backend port; this IP filter alone allows all 127.0.0.1 ports.
+# Kernel cgroup/eBPF support must be tested; systemd can ignore unsupported filters.
+RestrictAddressFamilies=AF_INET
+IPAddressDeny=any
+IPAddressAllow=127.0.0.1/32
+IPAccounting=yes
+PrivateNetwork=no
+CPUAccounting=yes
+MemoryAccounting=yes
+TasksAccounting=yes
+CPUQuota=50%
+MemoryMax=128M
+MemorySwapMax=0
+TasksMax=8
+RuntimeMaxSec=55s
+TimeoutStopSec=5s
+KillMode=control-group
+KillSignal=SIGTERM
+SendSIGKILL=yes
+FinalKillSignal=SIGKILL
+StandardOutput=journal
+StandardError=journal
