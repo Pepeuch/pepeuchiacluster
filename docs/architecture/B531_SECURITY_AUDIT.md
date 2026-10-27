@@ -67,3 +67,70 @@ systemd appartient au vérificateur séparé, chargé seulement par l'opérateur
 La validation du permis positif est testée seulement avec des fixtures de protocole.
 Le contrôleur livré n'en émet pas : l'autorité indépendante, la qualification OS et
 la promotion d'une preuve côté serveur restent hors activation dans cette mission.
+
+## Lots 3/4 — banc séparé et préparation du pilote
+
+Le [banc opérateur](../../pilot/worker_isolation/README.md) est dans `pilot/`, pas
+dans le worker ou un scheduler. Les modules importés par unittest n'exécutent aucune
+sonde. Le préparateur et le contrôleur exigent une action de pilote explicite et
+root ; ils n'ont pas été exécutés. Les sondes opèrent seulement sur une racine
+synthétique liée à un run ID, des endpoints privés approuvés et des cas fixes.
+
+Ouverture sans lecture/écriture si un refus échoue ; ENOENT/ECONNREFUSED/timeout
+inconclusifs ; pas de vrai secret, connexion Docker, ouverture GPU, Internet, charge
+globale ou fork bomb. Cas de cycle de vie refusés sans plafonds cgroup observés,
+un enfant au plus, délais fixes et témoin externe nécessaire. Résultat de sonde
+toujours non vérifié, jamais converti automatiquement en reçu authentifié.
+
+## Matrice résiduelle avant un permis réel
+
+| Risque | Gravité / condition | État et décision nécessaire |
+|---|---|---|
+| Autorité qui reprend simplement une sortie worker | Élevée : preuve falsifiable | Producteur qualifié absent ; le contrôleur livré refuse toujours. Qualifier une collecte indépendante avant toute émission positive. |
+| UID partagé, groupes/ACL et autres processus du même compte | Élevée : droits échappant au seul cgroup | Compte exclusif, inventaire et permissions hôte à confirmer sur la VM jetable. Aucun compte créé ici. |
+| Code RO dans le namespace mais modifiable via l'hôte/un autre processus | Élevée si code/ancêtres inscriptibles | Garantie indépendante `code_integrity` obligatoire et inconnue ; propriétaire/admin, contenu et release à mesurer. |
+| Restriction nftables par UID, IPv6 et connexions héritées | Élevée si UID partagé, FD d'un autre créateur ou règle inopérante | Aucun chargement ; inventaire FD, pairs contrôlés, compteurs et interaction avec l'existant à qualifier. |
+| Test de durée/arrêt qui tue son propre témoin | Élevée pour une fausse preuve | Superviseur externe, PID/starttime et cgroup recontrôlés, qualification du profil distincte du lancement courant. |
+| Écart entre contrôle et utilisation / fin d'une lease | Moyen à élevé pour un futur permis | Rechecks rapprochés implémentés ; pas de preuve d'enforcement continu ni attestation de commit serveur. Synchronisation/supervision à concevoir avant production. |
+| GPU/Docker absents ou errno ambigu | Moyen : faux positif de test | Métadonnées seulement ; absence comparée à l'hôte et politique réelle requises. Aucune ouverture GPU/connexion Docker ici. |
+| Canari hôte 0666 et helpers root temporaires | Moyen, limité au nouveau pilote | Changements exacts à autoriser explicitement, canari non sensible, chemins neufs, pas de nettoyage global ni d'activation permanente. |
+| Restauration d'une ancienne preuve | Élevée si acceptée implicitement | Recevabilité liée au boot/PID/starttime/configuration/politique ; pas de réactivation via une sauvegarde ou un fichier « approved ». |
+
+## Validation finale et garanties
+
+- **505 tests Python réussis** : 123 Control Plane, 272 Discovery Cache, 48 worker
+  B5.3 inchangés et 62 nouveaux tests B5.3.1. Les scénarios d'échec précèdent les
+  fixtures de succès ; six reproductions ont échoué sur B5.3 avant correction.
+- Firefox 158.0.1/geckodriver existant : parcours historique réussi (approbation,
+  versions, XSS, worker séparé, téléchargement/SHA, redémarrage, mobile, logout).
+- Les tests nouveaux sont unitaires/synthétiques, avec un diagnostic réel en lecture
+  seule et une paire IPC réelle privée **non privilégiée**. `SO_PASSCRED` requiert un
+  runner autorisant cette option ; le sandbox Codex la bloque, le test a passé sous
+  l'UID courant hors sandbox, sans sudo/root, listener ou configuration réseau.
+- Aucun test négatif OS sous systemd, préparateur de canaris root, contrôleur root,
+  charge cgroup ou règle nftables exécuté. **Isolation OS : NOT VERIFIED**.
+- Fichiers des 443 tests antérieurs, Control Plane, Discovery Cache, migrations et
+  bases POC préservés ; aucune collecte, inférence ou modification de `main`.
+
+La validation de structure, la vérification d'un auteur root et les mesures noyau
+sont trois opérations différentes. Le statut global positif reste bloqué faute
+d'une chaîne qualifiée d'épreuves indépendantes. Les interfaces du contrôleur
+permettent de tester les refus ; elles ne sont pas un service de production.
+
+## Fichiers concernés
+
+- Corrections : `pepeuch_worker/private_io.py`, `contracts.py`, `runner.py`,
+  `__main__.py`, `isolation.py`.
+- Nouveau vérificateur : `linux_observer.py`, `verification.py`,
+  `verification_channel.py`, `verifier.py` dans le même package.
+- Nouveau banc : `pilot/__init__.py`, `pilot/worker_isolation/` (modules et guide).
+- Tests : `tests/isolation/` (fixtures, audit, Linux, canaux, guards, sondes et CLI).
+- Gabarits : unité B5.3 ajustée, drop-in FD et exemples publics de politique/scope
+  dans `deploy/worker-linux/`. Aucun de ces fichiers n'a été installé.
+- Documentation : ce rapport, le contrat de vérification, le contrat B5.3, le guide
+  Debian, le journal B5.3 et `TODO.md`.
+
+Prochain lot recommandé : **B5.3.2, pilote négatif supervisé sur VM jetable**, après
+revue et confirmations du plan Debian. D'abord corroborer les preuves et terminer
+le producteur indépendant ; aucune émission positive, exposition LAN ou inférence
+tant que les garanties obligatoires restent inconnues.

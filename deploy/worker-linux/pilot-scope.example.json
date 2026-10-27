@@ -1,0 +1,15 @@
+{
+  "schema": "pepeuch.worker/isolation-pilot/v1",
+  "run_id": "00000000000000000000000000000000",
+  "fixture_root": "/opt/pepeuch-b531-fixtures-00000000000000000000000000000000",
+  "backend_port": 8765,
+  "blocked_loopback_port": 8766,
+  "peer_ipv4": "192.168.99.2",
+  "peer_ipv6": "fd00::2",
+  "peer_port": 8767,
+  "expected_uid": 1001,
+  "expected_gid": 1001,
+  "boot_id": "00000000-0000-0000-0000-000000000000",
+  "created_monotonic": 0,
+  "expires_monotonic": 1
+}
