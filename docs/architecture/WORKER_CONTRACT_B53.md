@@ -1,5 +1,11 @@
 # Contrat B5.3 — worker CPU indépendant
 
+**Complément B5.3.1** : le [contrat de vérification](ISOLATION_VERIFICATION_B531.md)
+sépare demandes, observations, reçus de tests et décisions authentifiées. Le
+diagnostic ne qualifie pas l'OS, le contrôleur livré refuse toujours et le lancement
+strict reste bloqué sans autorité indépendante. Les propriétés d'affichage ne
+peuvent plus autoriser un lancement ; aucun JSON worker ne confère `verified`.
+
 ## Identités et frontières
 
 | Élément | Contrat effectif | Limite de la preuve |
@@ -100,6 +106,13 @@ fonctionnel, avec l'indication explicite `NOT VERIFIED` ; il ne crée aucune pre
 OS et n'est pas un mode de déploiement sécurisé.
 
 ## Suites possibles
+
+Depuis B5.3.1, le runner copie la configuration, utilise des I/O ancrées sans suivre
+les parents et peut recontrôler la preuve avant claim/calcul/finish/reprise via un
+FD hérité authentifié. Une perte de preuve bloque le finish en conservant le
+résultat local. Ce contrôle n'est pas une attestation de commit serveur ni une
+garantie d'enforcement continu. Le mode `--application-test` reste explicitement
+séparé ; aucun contrôleur root, service ou règle réseau n'a été activé.
 
 - Valider les propriétés OS sur une machine Debian 13 jetable autorisée, puis
   concevoir un vérificateur de confiance lié au processus/cgroup et à sa durée de

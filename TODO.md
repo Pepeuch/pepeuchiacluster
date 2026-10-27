@@ -284,8 +284,20 @@ reste à développer ; ces validations portent sur des sondes et imports manuels
 - [x] B5.3e : 443 tests Python réussis (395 historiques inchangés + 48 nouveaux), Firefox B5.1 réussi ; reprise manuelle sans recalcul, pertes de connexion, révocation/rotation, résultats tardifs, sauvegarde/restauration CPU testés.
 - [x] B5.3c/f : gabarit systemd/cgroup v2 et [guide Debian 13](docs/architecture/B53_DEBIAN13_VALIDATION.md) préparés ; syntaxe vérifiée seulement, aucune installation/activation/VM modifiée. [Journal B5.3](docs/architecture/B53_IMPLEMENTATION.md).
 - [ ] Autoriser puis exécuter les tests négatifs OS sur une machine distincte : UID/groupes, secrets/SQLite/objets inaccessibles, FS, réseau, GPU/Docker, CPU/RAM/PID, runtime et arrêt des enfants — **NOT VERIFIED**.
-- [ ] Compléter le vérificateur de confiance et fermer le réseau OS au port backend : `run` strict refuse actuellement toute exécution ; `--application-test` ne valide pas l'isolation, le filtre IP candidat seul autorise tous les ports loopback.
+- [ ] Qualifier le producteur indépendant de permis et fermer/vérifier le réseau OS au port backend ; contrats, observations et canal de refus ajoutés en B5.3.1, sans activation. `--application-test` ne valide pas l'isolation, le filtre IP candidat seul autorise tous les ports loopback.
 - [ ] Avant une inférence ou un outil réel : contrat de lecture des versions d'entrée, quotas cumulés I/O/calcul, politique des moteurs/outils, preuves OS et profils Windows/macOS distincts ; conserver AnythingLLM/Open WebUI facultatifs.
+
+**Checkpoint B5.3.1 — 28 octobre 2026 (audit et vérification stricte, OS non qualifié)**
+
+- [x] Vérifier les trois commits B5.3 sur `feat/webui-control-plane-b53`, arbre initial propre ; commits locaux distincts, aucun push/merge ou modification de `main`.
+- [x] [Audit de sécurité](docs/architecture/B531_SECURITY_AUDIT.md) : matrice des risques et six reproductions avant correction ; I/O ancrées, verrou sur un seul FD, nettoyage limité à l'inode créé, copie de configuration et rejet des auto-attestations. Régression CLI d'initialisation ajoutée.
+- [x] [Contrats de vérification](docs/architecture/ISOLATION_VERIFICATION_B531.md) : exigences/observations/reçus/décisions séparés, contexte PID/starttime/boot/namespaces/cgroup, empreintes et fraîcheur ; aucun succès approximatif sur contrôleur/limite manquant.
+- [x] Préparer le canal hérité, vérifier credentials noyau par message, épingler contexte/politique/contrôleur et recontrôler avant claim/calcul/finish/reprise ; la perte de preuve bloque la publication et conserve le journal.
+- [x] Préparer [le banc fixe séparé](pilot/worker_isolation/README.md), canaris synthétiques, endpoints privés approuvés et cas de cycle de vie bornés ; aucun préparateur root, contrôleur root ou test négatif OS exécuté.
+- [x] Valider **506 tests Python** (443 historiques inchangés + 63 nouveaux), Firefox historique et `git diff --check` ; préserver Control Plane, Discovery Cache et bases POC.
+- [ ] Autoriser un pilote négatif sur une **VM jetable distincte** selon [le plan opérateur Debian](docs/architecture/B53_DEBIAN13_VALIDATION.md), avec confirmations séparées pour comptes, fichiers, unités et pare-feu. Aucun accès à la VM historique autorisé.
+- [ ] Qualifier collecte indépendante, compte exclusif, code/FD/montages, règles/IPv4/IPv6/ports et ressources/arrêt avant un producteur de permis positif. Le contrôleur livré émet toujours `deny` ; strict reste bloqué, OS **NOT VERIFIED**.
+- [ ] Définir si nécessaire une attestation serveur distincte : aucun champ worker ne promeut aujourd'hui le statut `verified`. Pas de vraie inférence, modèle, GPU ou service privilégié permanent.
 
 # Phase 2 — Choix et POC de la base de données
 

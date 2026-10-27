@@ -1,5 +1,36 @@
 # B5.3 — worker CPU indépendant, validation OS séparée
 
+## Complément B5.3.1 — 28 octobre 2026
+
+[Audit et bilan](B531_SECURITY_AUDIT.md), [contrat d'isolation](ISOLATION_VERIFICATION_B531.md)
+et [banc préparé](../../pilot/worker_isolation/README.md). Base et trois commits B5.3
+préservés ; continuation sur la même branche, sans push ni modification de `main`.
+
+Six reproductions ont échoué avant correction : courses des parents en lecture/
+création, collision destructive du journal temporaire, double ouverture du verrou,
+configuration mutable et helper déclaratif trop permissif. I/O désormais ancrées
+sur des descripteurs, validation/verrou sur le même FD, nettoyage par inode créé,
+copie de configuration et refus des auto-attestations. Une régression complémentaire
+couvre la course des parents lors de l'initialisation CLI.
+
+Le vérificateur collecte les faits Linux bornés et identifie processus, boot,
+namespaces, cgroup/inode, configuration et politique ; contrôle demandes/reçus et
+canal hérité root avec credentials de **chaque message**. Rechecks avant claim,
+calcul et publication/reprise, sans effacer le journal en cas de perte de preuve.
+Une entrée JSON ou un reçu structurellement valide ne devient jamais une autorité.
+Le contrôleur diagnostique fourni émet uniquement `deny` ; producteur de permis
+positifs et qualification OS complète restent bloqués avant le pilote autorisé.
+
+**506 tests Python réussis** : 443 historiques inchangés + 63 nouveaux B5.3.1 ;
+Firefox historique réussi. Diagnostic réel en lecture seule et IPC privée réelle
+non privilégiée distingués des fixtures. Aucun préparateur/contrôleur root, unité,
+règle nftables, compte ou sonde négative OS exécuté : **NOT VERIFIED**.
+Le guide Debian indique périmètre, changements proposés, confirmations, contre-épreuves
+et retour à l'état initial ciblé. Les sections suivantes conservent le checkpoint
+historique B5.3 de 443 tests ; elles ne décrivent pas une validation OS nouvelle.
+
+## Checkpoint historique B5.3
+
 Base publiée vérifiée : `ef5b293ae91132ff0fda0431318b649184e14348` (merge B5.2).
 Branche `feat/webui-control-plane-b53`, arbre initial propre. Aucun push, merge,
 installation, compte système, changement de permissions hôte ou action sur la VM.

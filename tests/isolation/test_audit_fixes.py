@@ -1,6 +1,8 @@
 """Deterministic regressions, not OS isolation tests; private /tmp fixtures only."""
 
 import json
+from contextlib import redirect_stderr
+import io
 import os
 from pathlib import Path
 import tempfile
@@ -12,6 +14,7 @@ from control_plane.contracts import Problem
 from pepeuch_worker import private_io
 from pepeuch_worker.contracts import SecurityProperty, require_verified
 from pepeuch_worker.runner import IndependentRunner
+from pepeuch_worker.__main__ import main
 
 
 class AuditFixes(unittest.TestCase):
@@ -87,3 +90,21 @@ class AuditFixes(unittest.TestCase):
         data["limits"]["seconds"] = 999
         self.assertNotEqual(runner.config["worker_id"], data["worker_id"])
         self.assertEqual(runner.config["limits"]["seconds"], 30)
+
+    def test_initialization_parent_race_never_creates_directory_outside_anchor(self):
+        selected, outside = self.root / "selected", self.root / "outside"
+        selected.mkdir(mode=0o700)
+        outside.mkdir(mode=0o700)
+        config = self.root / "config.json"
+        config.write_bytes(Path("deploy/worker-linux/worker-config.example.json").read_bytes())
+        original = os.mkdir
+        def race(path, *args, **kwargs):
+            if Path(path).name == "instance":
+                selected.rename(self.root / "retired")
+                selected.symlink_to(outside, target_is_directory=True)
+            return original(path, *args, **kwargs)
+        argv = ["pepeuch_worker", "init", "--worker-dir", str(selected / "instance"), "--configuration-file", str(config)]
+        with patch("sys.argv", argv), patch("os.mkdir", side_effect=race), redirect_stderr(io.StringIO()):
+            self.assertEqual(main(), 1)  # Changed pathname is refused after anchored creation.
+        self.assertFalse((outside / "instance").exists())
+        self.assertTrue((self.root / "retired/instance").is_dir())

@@ -98,8 +98,8 @@ toujours non vérifié, jamais converti automatiquement en reçu authentifié.
 
 ## Validation finale et garanties
 
-- **505 tests Python réussis** : 123 Control Plane, 272 Discovery Cache, 48 worker
-  B5.3 inchangés et 62 nouveaux tests B5.3.1. Les scénarios d'échec précèdent les
+- **506 tests Python réussis** : 123 Control Plane, 272 Discovery Cache, 48 worker
+  B5.3 inchangés et 63 nouveaux tests B5.3.1. Les scénarios d'échec précèdent les
   fixtures de succès ; six reproductions ont échoué sur B5.3 avant correction.
 - Firefox 158.0.1/geckodriver existant : parcours historique réussi (approbation,
   versions, XSS, worker séparé, téléchargement/SHA, redémarrage, mobile, logout).
@@ -111,6 +111,12 @@ toujours non vérifié, jamais converti automatiquement en reçu authentifié.
   charge cgroup ou règle nftables exécuté. **Isolation OS : NOT VERIFIED**.
 - Fichiers des 443 tests antérieurs, Control Plane, Discovery Cache, migrations et
   bases POC préservés ; aucune collecte, inférence ou modification de `main`.
+- `git diff --check` propre ; unité et drop-in FD rendus acceptés par
+  `systemd-analyze verify --man=no --generators=no` local, sans chargement/activation.
+  Analyse de motifs de secrets : aucun signalement, complétée par la revue manuelle.
+  Les validations ordinaires ont tourné sous UID 1000 ; les opérations root du banc
+  restent simulées ou non exécutées. Référence B3.3 conservée :
+  `ef2e2834d86448aa5ef5ee8b95f5b6d42555684b0a588b837d83abb0775d36bd`.
 
 La validation de structure, la vérification d'un auteur root et les mesures noyau
 sont trois opérations différentes. Le statut global positif reste bloqué faute

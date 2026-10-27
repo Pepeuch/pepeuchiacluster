@@ -1,5 +1,13 @@
 # B5.3 — protocole manuel Debian 13, non exécuté
 
+**Mise à jour B5.3.1 — 28 octobre 2026** : [audit et risques](B531_SECURITY_AUDIT.md),
+[contrat de vérification](ISOLATION_VERIFICATION_B531.md) et
+[banc séparé](../../pilot/worker_isolation/README.md). Le diagnostic Linux, le canal
+hérité et les contrôles de fraîcheur sont implémentés ; le contrôleur proposé
+émet toujours `deny`. Aucun producteur qualifié de permis positif n'est livré,
+aucune sonde OS ou opération root de ce guide n'a été exécutée. Les comptes,
+VM, unités et règles existants restent inchangés.
+
 Cette procédure vise **une machine de test distincte explicitement autorisée**.
 Elle n'autorise aucune intervention sur la VM actuelle, Proxmox, HAOS, NAS,
 Docker, GPU, bases POC ou données historiques. Les commandes privilégiées ci-dessous
@@ -299,3 +307,61 @@ fermer le réseau OS au backend, définir l'API des entrées, les politiques de 
 et de téléchargement, puis valider des budgets adaptés. Windows/macOS nécessitent
 des profils distincts ; AnythingLLM/Open WebUI demeurent facultatifs et ne remplacent
 pas ces frontières de sécurité.
+
+## 7. Plan opérateur B5.3.1 : confirmations et critères de sortie
+
+Ce plan prépare un **pilote négatif**, pas une activation en production. Le mode
+de test applicatif B5.3 reste disponible et conserve son étiquette non isolée.
+
+| Étape | Inventaire/changement envisagé | Confirmation nécessaire avant action |
+|---|---|---|
+| A — revue | Machine jetable distincte, commit relu, versions noyau/systemd/cgroup, unités/comptes/groupes/règles actuels, sauvegarde des seuls états concernés | Accord sur la machine et le périmètre ; aucune action sur la VM historique |
+| B — chemins/comptes | Compte worker exclusif non root, code immuable root, état privé, faux backend/canaris sous une racine neuve | Liste exacte des chemins et UID/GID ; aucun compte ou dossier préexistant réutilisé sans comparaison |
+| C — fixtures | `prepare` crée uniquement des fichiers synthétiques ; canari hôte 0666 non sensible, marqueur root 0444 | Accord explicite sur ces permissions locales de test ; jamais un vrai secret ou index copié |
+| D — unité/FD | Profil candidat, `ProcSubset=all` pour lire le boot ID, drop-in `OpenFile` vers un contrôleur temporaire | Revue du fichier rendu et des FD ; syntaxe seule insuffisante, pas d'élargissement AF_UNIX général |
+| E — réseau | Table neuve nftables dédiée au seul UID, pairs privés contrôlés, ports et compteurs relevés | Autorisation spécifique pare-feu/pairs ; aucune purge, remplacement ou activation permanente |
+| F — sondes | Cas fixes séparés, contrôle des canaris hors namespace ; lifecycle sous superviseur externe | Accord sur les seuls cas autorisés ; plafonds cgroup observés avant enfant/attente, aucun stress global |
+| G — arrêt/retrait | Stop de la seule unité, cgroup vide, révocation du seul worker, conservation des résultats ; comparaison des artefacts avant retrait | Accord séparé de retrait ciblé ; préserver règles/comptes/fichiers préexistants |
+
+Relever au préalable propriétaires/modes/ACL des racines, UID/GID effectifs et
+supplémentaires, autres processus du compte, code/profil/règles et leurs SHA.
+Copier aussi le package `pilot/` dans la copie de code de test relue pour utiliser
+le banc ; il ne devient pas une dépendance du worker normal. Les exemples de
+politique et scope sont des sentinelles publiques, invalides/périmées à remplacer.
+Les ports/pairs doivent appartenir au pilote ; aucun test Internet ou fournisseur.
+
+Le diagnostic en lecture seule peut être exécuté sans root ni service :
+
+```bash
+python3 -m pepeuch_worker.verifier \
+  --configuration-file /chemin/revu/worker.json \
+  --policy-file /chemin/revu/isolation-policy.json
+```
+
+Code de sortie 2 et `NOT VERIFIED` sont attendus. Une politique est une demande,
+pas une preuve. Les propriétés inconnues ou incompatibles restent bloquantes.
+Ne pas remplacer les contrôles par un champ `verified: true` ou un fichier approuvé.
+
+Pour le futur test de canal, `pilot.worker_isolation.controller` est un outil root
+temporaire, non démarré ici : un répertoire neuf sous `/run`, un socket root privé,
+une connexion maximum, attente 20 s puis réponse de refus. Le drop-in FD n'est pas
+installé. Aucun composant livré ne délivre un permis ; ne pas tenter de rendre le
+profil « opérationnel » en retirant les guards. L'UID root du contrôleur et le
+compte exclusif constituent des décisions de confiance à examiner séparément.
+
+Pour les sondes, suivre le [guide du banc](../../pilot/worker_isolation/README.md).
+Le faux backend est `<fixture_root>/backend`, le scope reste hors de ce sous-arbre
+masqué. Ne pas considérer ces seuls refus comme la preuve que le backend final est
+protégé : comparer chemins, propriétaire et montages réels. Docker/GPU sont inspectés
+par métadonnées uniquement ; aucune ouverture de périphérique ni connexion Docker.
+Éviter toute conclusion positive fondée seulement sur un fichier/règle présent,
+un errno ambigu ou une sortie worker. Les résultats API déjà publiés restent
+immutables et la restauration B5.2 révoque les anciennes identités.
+
+Critères de sortie du pilote : preuves indépendantes versionnées, corrélées au
+profil/code/règles et à l'exécution courante ; tous les tests négatifs autorisés
+concluants, ressources/arrêt vérifiés, contre-épreuves de rejeu réussies, état initial
+comparé après arrêt. Distinguer qualification du profil et preuves fraîches au
+lancement : un arrêt/reboot/changement invalide les anciens relevés. Avant toute
+émission positive, qualifier le producteur indépendant et les races entre contrôle
+et utilisation ; le backend ne reçoit pas encore d'attestation OS serveur.
