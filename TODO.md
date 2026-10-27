@@ -214,7 +214,16 @@ Objectif : exploiter les catalogues existants au lieu de reconstruire leur trava
 - [x] Séparer `model_artifact` (Hugging Face), `agent_resource` (Awesome AI Agents) et `nim_microservice` (NVIDIA NIM) ; aucune identité canonique déduite d'un nom ressemblant.
 - [x] Exécuter **33/33 tests Python** localement et sur la VM pour les contrats B1/B1.1 ; sonde NVIDIA réelle identique sur les deux environnements.
 - [x] Fournir les sondes en lecture seule, sans modifier PostgreSQL/SurrealDB, télécharger de poids ni utiliser de GPU ou de clés privées (`database/poc/probe_source_adapters.py`).
-- [ ] Construire l'ingestion incrémentale réelle de ces sources vers le Discovery Cache et définir le contrat d'upsert versionné ; les sondes B1/B1.1 **ne sont pas** des importeurs en base.
+- [ ] Industrialiser l'ingestion incrémentale (exécution planifiée, reprise sur erreur, rétention, surveillance) ; le POC B2 est une importation **manuelle**, pas encore un Discovery Service en production.
+
+**Checkpoint B2 — 27 octobre 2026 (Discovery Cache POC validé sur la VM)**
+
+- [x] Définir un snapshot JSON indépendant de PostgreSQL/SurrealDB, à identités stables `(source, entity_type, source_id)`, empreintes SHA-256, révisions, horodatages et périmètre de collecte.
+- [x] Fournir les générateurs d'import `COPY`/upsert PostgreSQL et `UPSERT` SurrealDB, sans suppression automatique ni modification des tables historiques.
+- [x] Valider sur la VM **48/48 tests Python**, puis deux imports initiaux à 5 ressources et leur réimportation idempotente (**5/5 dans les deux bases**).
+- [x] Vérifier les comparaisons : même snapshot = **5 inchangées** ; simulation contrôlée = **1 ajoutée, 1 modifiée, 1 non observée, 3 inchangées**. `not_observed` n'autorise aucune suppression.
+- [x] Collecter réellement **11 ressources** de `models.dev` (5), Hugging Face (2), Awesome AI Agents (3) et NVIDIA NIM (1) ; contrôler intégrité et identités ; importer **11/11** dans PostgreSQL et SurrealDB sans toucher aux 405 modèles historiques.
+- [ ] Éprouver les imports partiellement échoués, les changements de révision réels et les variations de périmètre ; conserver les snapshots et définir la politique de rafraîchissement.
 
 ## 3.1 models.dev — source seed principale
 
@@ -294,6 +303,13 @@ Objectif : exploiter les catalogues existants au lieu de reconstruire leur trava
 - [ ] Stocker coût, contexte, capacités, confidentialité et contraintes
 - [ ] Distinguer modèle sous-jacent et provider qui le sert
 
+## Hubs complémentaires à étudier — ModelScope, OpenCSG/CSGHub, MoArk
+
+- [ ] **ModelScope (Alibaba)** : sonder l'API officielle sur quelques modèles ciblés et définir un adaptateur `model_artifact` distinct de Hugging Face (identité, révision, fichiers, licence, restrictions d'accès). Séparer modèles, datasets, Studios et agents.
+- [ ] **OpenCSG / CSGHub** : vérifier les API publiques, les versions et la compatibilité Hugging Face annoncée ; adapter modèles et ressources d'agents sans fusionner automatiquement les identifiants de plateformes différentes.
+- [ ] **MoArk (OSChina)** : qualifier son catalogue et ses conditions d'accès ; représenter par défaut les offres de modèles servis comme `inference_endpoint`, et ne déclarer `model_artifact` que lorsqu'un dépôt de poids et sa provenance sont vérifiés.
+- [ ] Tester chaque connecteur sur des fixtures, avec conservation de la provenance, des valeurs inconnues et des limites de quotas ; aucune aspiration globale ni jeton stocké dans Git.
+
 ## Catalogue distinct de ressources d'agents (Awesome AI Agents)
 
 - [x] Sonder le JSON officiel au commit épinglé `a32e86f60db8dd9556218403532264e0794822c4` : 305 entrées brutes, **304 IDs uniques**, un doublon strictement identique.
@@ -308,6 +324,7 @@ Objectif : ne pas transformer la base locale en miroir géant.
 
 ## Discovery Cache
 
+- [x] Valider un **POC d'import mult_sources** dans PostgreSQL et SurrealDB (11 ressources distinctes), avec identité stable et horodatage de dernière observation.
 - [ ] Stocker un index léger des modèles externes vus
 - [ ] Conserver au minimum :
   - external id

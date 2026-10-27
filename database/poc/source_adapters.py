@@ -12,7 +12,9 @@ import re
 from typing import Any, Literal
 
 
-EntityType = Literal["model_artifact", "agent_resource", "nim_microservice"]
+EntityType = Literal[
+    "model_reference", "model_artifact", "agent_resource", "nim_microservice", "inference_endpoint"
+]
 
 
 @dataclass(frozen=True)
