@@ -1,0 +1,564 @@
+{
+  "baseline_code_sha256": {
+    "collect_discovery_snapshot.py": "7ee9b536eb8aa066c5d33627f439b02534ec40a4eba36190175aea3a13c5436a",
+    "csghub_adapter.py": "e64b2598cf664dd2e10eda574d157be92e8c44dc3573c57d3a269ffcbac330bf",
+    "discovery_cache.py": "93fb83fc6a9005a23e20ef87bf19182d6bdea2f09673920816822b1a770b55dd",
+    "emit_discovery_import.py": "4f979764e3dae4b5d82c7f93dff288e528e6dea3621710d6ccd28a5c659d8d6a",
+    "import_models_dev.py": "4bf923fa203e8c28b5d9fe2f4709372e511e97acc3bcc84dac7011eee63cbee9",
+    "moark_adapter.py": "61941da5d6d04dfa4cc4e5bbd5f6b6e1b29eb64e89f56cd3f3e907e9d9b34689",
+    "modelscope_adapter.py": "dc982508beb2f3211186be6b5f960f985cb38d4d36a3d8e5b7ebf84596ba2ca6",
+    "source_adapters.py": "e2a9c90dadb5594946a1690a1c72e071fac20efcf424514f42a8b8264d917439"
+  },
+  "baseline_commit": "d528580ddd6e1c4b364b64e2322eb2649e7b2e62",
+  "capture_method": "git archive B3.3 database/poc; execute archived adapters only; values frozen before tests; not real source observations",
+  "captured_at": "2026-10-27T00:00:00+00:00",
+  "combined": {
+    "ordered_record_keys": [
+      "d_1e8efeb8e3188c692907c48308658b89ebef5628f956c8f201c63d03b68d8012",
+      "d_31660a86045ce9e8dcc6ae12de526fd8c3717ef4f0c260676824a7fd8a3f28b1",
+      "d_3446bd13f9f0879e9bac0be741d6c2841786fe9d77f01afc0d5f56372e4eb584",
+      "d_445f44235c352f29279bbce140e8dd2b1d580628f328fd1ba3ec373353080231",
+      "d_6caa1291991acca481b70ebfad5dd061bb81cf938124f751b807c9166a69270f",
+      "d_b888d7af75e3014dbf795a8cc4a311ce490aa34106ddf7bd6c2d3787ab223ace",
+      "d_cef394137f6db01bfede8e8916fafa3800e8edb6fd2576c9c31c3c14f9e8d47a"
+    ],
+    "scope": {
+      "awesome-ai-agents": {
+        "limit": 1,
+        "mode": "first_n_unique"
+      },
+      "csghub": {
+        "endpoint": "https://hub.opencsg.com",
+        "ids": [
+          "OpenCSG/csg-wukong-1B"
+        ],
+        "mode": "exact_ids",
+        "revision_request": "main",
+        "source": "csg"
+      },
+      "huggingface": {
+        "ids": [
+          "google/gemma-3-1b-it"
+        ],
+        "mode": "exact_ids"
+      },
+      "moark": {
+        "authentication": "anonymous",
+        "catalog_url": "https://moark.ai/v1/models?type=text2text&include_details=false",
+        "endpoint": "https://moark.ai/v1",
+        "ids": [
+          "Qwen3-8B"
+        ],
+        "input": "synthetic_fixture",
+        "mode": "exact_ids"
+      },
+      "models.dev": {
+        "limit": 1,
+        "mode": "first_n_sorted"
+      },
+      "modelscope": {
+        "endpoint": "https://modelscope.cn",
+        "ids": [
+          "Qwen/Qwen3-0.6B"
+        ],
+        "mode": "exact_ids"
+      },
+      "nvidia-nim-metadata": {
+        "mode": "exact_tag",
+        "resource_id": "nim/nvidia/parakeet-1-1b-rnnt-multilingual",
+        "tag": "1.5.0"
+      }
+    },
+    "snapshot_id": "s_e1ea910f305c35e27a63aa1a911c028ac5c0a4c2ca98b46ff5c66e9674ee5a60"
+  },
+  "ownership": {
+    "awesome-ai-agents": {
+      "raw_input_shared": true,
+      "snapshot_attributes_shared": true,
+      "snapshot_raw_shared": true,
+      "snapshot_scope_shared": true
+    },
+    "csghub": {
+      "raw_input_shared": false,
+      "snapshot_attributes_shared": true,
+      "snapshot_raw_shared": true,
+      "snapshot_scope_shared": true
+    },
+    "huggingface": {
+      "raw_input_shared": true,
+      "snapshot_attributes_shared": true,
+      "snapshot_raw_shared": true,
+      "snapshot_scope_shared": true
+    },
+    "moark": {
+      "raw_input_shared": false,
+      "snapshot_attributes_shared": true,
+      "snapshot_raw_shared": true,
+      "snapshot_scope_shared": true
+    },
+    "models.dev": {
+      "raw_input_shared": null,
+      "snapshot_attributes_shared": true,
+      "snapshot_raw_shared": true,
+      "snapshot_scope_shared": true
+    },
+    "modelscope": {
+      "raw_input_shared": false,
+      "snapshot_attributes_shared": true,
+      "snapshot_raw_shared": true,
+      "snapshot_scope_shared": true
+    },
+    "nvidia-nim-metadata": {
+      "raw_input_shared": true,
+      "snapshot_attributes_shared": true,
+      "snapshot_raw_shared": true,
+      "snapshot_scope_shared": true
+    }
+  },
+  "partial": {
+    "comparison": {
+      "added": [],
+      "after": "s_4f4f38635f9ede5ac05b06996376c5fd88cb632b323891cafbbf6b785ea4ed68",
+      "before": "s_e1ea910f305c35e27a63aa1a911c028ac5c0a4c2ca98b46ff5c66e9674ee5a60",
+      "changed": [],
+      "not_observed": [
+        "d_31660a86045ce9e8dcc6ae12de526fd8c3717ef4f0c260676824a7fd8a3f28b1"
+      ],
+      "note": "not_observed is NOT a deletion instruction (sample or source may be partial)",
+      "unchanged_count": 6
+    },
+    "snapshot_id": "s_4f4f38635f9ede5ac05b06996376c5fd88cb632b323891cafbbf6b785ea4ed68"
+  },
+  "sources": {
+    "awesome-ai-agents": {
+      "snapshot": {
+        "captured_at": "2026-10-27T00:00:00+00:00",
+        "format": "pepeuch-ai.discovery-cache/v1",
+        "records": [
+          {
+            "attributes": {
+              "categories": [
+                "AI Agents"
+              ],
+              "description": "Local-first agent",
+              "has_public_repository": true,
+              "source_count": 1,
+              "source_urls": [
+                "https://github.com/Zfinix/aster"
+              ]
+            },
+            "display_name": "Aster",
+            "entity_type": "agent_resource",
+            "payload_sha256": "22c410325c27ce81eeb58522cf3aa102c69f38669effa05fc9945f7b6e43d1a5",
+            "raw_metadata": {
+              "categories": [
+                "AI Agents"
+              ],
+              "has_public_repository": true,
+              "id": "aster-712d33a8",
+              "project": "Aster",
+              "project_description": "Local-first agent",
+              "sources": [
+                {
+                  "source": "github",
+                  "source_url": "https://github.com/Zfinix/aster",
+                  "stars": 107
+                }
+              ]
+            },
+            "record_key": "d_445f44235c352f29279bbce140e8dd2b1d580628f328fd1ba3ec373353080231",
+            "relationships": [],
+            "source": "awesome-ai-agents",
+            "source_id": "aster-712d33a8",
+            "source_revision": "5555555555555555555555555555555555555555"
+          }
+        ],
+        "scope": {
+          "awesome-ai-agents": {
+            "limit": 1,
+            "mode": "first_n_unique"
+          }
+        },
+        "snapshot_id": "s_faf09db900897a92df5e1a53fa5b9bdbf003bb21312fbd2b99413db8b0aaf0a8"
+      }
+    },
+    "csghub": {
+      "snapshot": {
+        "captured_at": "2026-10-27T00:00:00+00:00",
+        "format": "pepeuch-ai.discovery-cache/v1",
+        "records": [
+          {
+            "attributes": {
+              "access": "unknown",
+              "approval_mode": null,
+              "author": "fictional-test-owner",
+              "created_at": "2026-01-01T00:00:00Z",
+              "downloads": 7,
+              "file_count": 2,
+              "gated": null,
+              "last_modified": "2026-01-02T00:00:00Z",
+              "library_name": "safetensors",
+              "license": null,
+              "likes": 2,
+              "observed_formats": [
+                "safetensors"
+              ],
+              "pipeline_tag": "text-generation",
+              "tags": [
+                "safetensors",
+                "apache-2.0"
+              ],
+              "visibility": "public"
+            },
+            "display_name": "csg-wukong-1B",
+            "entity_type": "model_artifact",
+            "payload_sha256": "4e211d4531ed31ebe04f4520b3c24fc4adc06e568c6a0d355141d51c6023fe90",
+            "raw_metadata": {
+              "author": "fictional-test-owner",
+              "created_at": "2026-01-01T00:00:00Z",
+              "downloads": 7,
+              "id": "OpenCSG/csg-wukong-1B",
+              "last_modified": "2026-01-02T00:00:00Z",
+              "library_name": "safetensors",
+              "likes": 2,
+              "pipeline_tag": "text-generation",
+              "private": false,
+              "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "siblings": [
+                {
+                  "rfilename": "config.json"
+                },
+                {
+                  "rfilename": "model.safetensors"
+                }
+              ],
+              "tags": [
+                "safetensors",
+                "apache-2.0"
+              ]
+            },
+            "record_key": "d_6caa1291991acca481b70ebfad5dd061bb81cf938124f751b807c9166a69270f",
+            "relationships": [],
+            "source": "csghub",
+            "source_id": "OpenCSG/csg-wukong-1B",
+            "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "scope": {
+          "csghub": {
+            "endpoint": "https://hub.opencsg.com",
+            "ids": [
+              "OpenCSG/csg-wukong-1B"
+            ],
+            "mode": "exact_ids",
+            "revision_request": "main",
+            "source": "csg"
+          }
+        },
+        "snapshot_id": "s_f460c2243e91fab902828831ebb8e7790197d2281e742462de8d939769bf1868"
+      }
+    },
+    "huggingface": {
+      "snapshot": {
+        "captured_at": "2026-10-27T00:00:00+00:00",
+        "format": "pepeuch-ai.discovery-cache/v1",
+        "records": [
+          {
+            "attributes": {
+              "access": "gated",
+              "approval_mode": "manual",
+              "architectures": [
+                "Gemma3ForCausalLM"
+              ],
+              "available_formats": [
+                "safetensors"
+              ],
+              "base_models": [
+                "google/gemma-3-1b-pt"
+              ],
+              "file_count": 2,
+              "license": "gemma"
+            },
+            "display_name": "gemma-3-1b-it",
+            "entity_type": "model_artifact",
+            "payload_sha256": "5dc66d903bf2bd0203efc07b5d23780d881aca493e6bb763f26cc0edfe938c2f",
+            "raw_metadata": {
+              "cardData": {
+                "base_model": "google/gemma-3-1b-pt",
+                "license": "gemma"
+              },
+              "config": {
+                "architectures": [
+                  "Gemma3ForCausalLM"
+                ]
+              },
+              "gated": "manual",
+              "id": "google/gemma-3-1b-it",
+              "safetensors": {
+                "total": 100
+              },
+              "sha": "dcc83ea841ab6100d6b47a070329e1ba4cf78752",
+              "siblings": [
+                {
+                  "rfilename": "config.json"
+                },
+                {
+                  "rfilename": "model.safetensors"
+                }
+              ]
+            },
+            "record_key": "d_cef394137f6db01bfede8e8916fafa3800e8edb6fd2576c9c31c3c14f9e8d47a",
+            "relationships": [
+              {
+                "relation": "declared_base_model",
+                "source": "huggingface",
+                "target_id": "google/gemma-3-1b-pt"
+              }
+            ],
+            "source": "huggingface",
+            "source_id": "google/gemma-3-1b-it",
+            "source_revision": "dcc83ea841ab6100d6b47a070329e1ba4cf78752"
+          }
+        ],
+        "scope": {
+          "huggingface": {
+            "ids": [
+              "google/gemma-3-1b-it"
+            ],
+            "mode": "exact_ids"
+          }
+        },
+        "snapshot_id": "s_eacaef0792210055ed4d7d9bdbcf3057189cb48d9209c653a77dfa73c3944871"
+      }
+    },
+    "moark": {
+      "snapshot": {
+        "captured_at": "2026-10-27T00:00:00+00:00",
+        "format": "pepeuch-ai.discovery-cache/v1",
+        "records": [
+          {
+            "attributes": {
+              "access": "unknown",
+              "api_base": "https://moark.ai/v1",
+              "catalog_url": "https://moark.ai/v1/models?type=text2text&include_details=false",
+              "created": 1700000000,
+              "license": null,
+              "owned_by": "synthetic-owner",
+              "weights_available": null
+            },
+            "display_name": "Qwen3-8B",
+            "entity_type": "inference_endpoint",
+            "payload_sha256": "4f4ef29daf63daed41cec97460e48a5e93dbd9ea0497130307644756b7e15167",
+            "raw_metadata": {
+              "created": 1700000000,
+              "id": "Qwen3-8B",
+              "object": "model",
+              "owned_by": "synthetic-owner"
+            },
+            "record_key": "d_31660a86045ce9e8dcc6ae12de526fd8c3717ef4f0c260676824a7fd8a3f28b1",
+            "relationships": [],
+            "source": "moark",
+            "source_id": "Qwen3-8B",
+            "source_revision": null
+          }
+        ],
+        "scope": {
+          "moark": {
+            "authentication": "anonymous",
+            "catalog_url": "https://moark.ai/v1/models?type=text2text&include_details=false",
+            "endpoint": "https://moark.ai/v1",
+            "ids": [
+              "Qwen3-8B"
+            ],
+            "input": "synthetic_fixture",
+            "mode": "exact_ids"
+          }
+        },
+        "snapshot_id": "s_83de636b8708a962192414d9950a80191c35f3d0941cb20be047f9622199f6cb"
+      }
+    },
+    "models.dev": {
+      "snapshot": {
+        "captured_at": "2026-10-27T00:00:00+00:00",
+        "format": "pepeuch-ai.discovery-cache/v1",
+        "records": [
+          {
+            "attributes": {
+              "benchmarks_count": 0,
+              "context_tokens": 4096,
+              "family": null,
+              "open_weights": true,
+              "source_path": "models/example/alpha.toml",
+              "tools_supported": false,
+              "weights_count": 0
+            },
+            "display_name": "Alpha",
+            "entity_type": "model_reference",
+            "payload_sha256": "8fc513c13b272712cfcb74f6db69b8b79de74c985e27a1f869f2d8685af1236d",
+            "raw_metadata": {
+              "limit": {
+                "context": 4096
+              },
+              "name": "Alpha",
+              "open_weights": true,
+              "tool_call": false
+            },
+            "record_key": "d_b888d7af75e3014dbf795a8cc4a311ce490aa34106ddf7bd6c2d3787ab223ace",
+            "relationships": [],
+            "source": "models.dev",
+            "source_id": "example/alpha",
+            "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "scope": {
+          "models.dev": {
+            "limit": 1,
+            "mode": "first_n_sorted"
+          }
+        },
+        "snapshot_id": "s_343aff4a6beed0cecc0e0cf68120d5ca48b3c5ef97841e87b2b208018aa4e23b"
+      }
+    },
+    "modelscope": {
+      "snapshot": {
+        "captured_at": "2026-10-27T00:00:00+00:00",
+        "format": "pepeuch-ai.discovery-cache/v1",
+        "records": [
+          {
+            "attributes": {
+              "access": "public",
+              "description": "Synthetic fixture for a read-only repository contract test, not live metadata",
+              "downloads": 42,
+              "files": null,
+              "gated": false,
+              "last_modified": null,
+              "license": "apache-2.0",
+              "likes": 7,
+              "revision_label": null,
+              "tags": [
+                "text-generation"
+              ],
+              "visibility": "public"
+            },
+            "display_name": "Qwen3-0.6B",
+            "entity_type": "model_artifact",
+            "payload_sha256": "f46af4c4c483e30304daf22359b6974577d54bd15d657e06e076deebe673eb79",
+            "raw_metadata": {
+              "description": "Synthetic fixture for a read-only repository contract test, not live metadata",
+              "downloads": 42,
+              "gated": false,
+              "last_modified": null,
+              "license": "apache-2.0",
+              "likes": 7,
+              "name": "Qwen3-0.6B",
+              "owner": "Qwen",
+              "repo_id": "Qwen/Qwen3-0.6B",
+              "repo_type": "model",
+              "tags": [
+                "text-generation"
+              ],
+              "visibility": 5
+            },
+            "record_key": "d_1e8efeb8e3188c692907c48308658b89ebef5628f956c8f201c63d03b68d8012",
+            "relationships": [],
+            "source": "modelscope",
+            "source_id": "Qwen/Qwen3-0.6B",
+            "source_revision": null
+          }
+        ],
+        "scope": {
+          "modelscope": {
+            "endpoint": "https://modelscope.cn",
+            "ids": [
+              "Qwen/Qwen3-0.6B"
+            ],
+            "mode": "exact_ids"
+          }
+        },
+        "snapshot_id": "s_d12b6121bb6bfd2eb3c23d199588b6b66fb33f0e3afd73327a05c38aaa103b58"
+      }
+    },
+    "nvidia-nim-metadata": {
+      "snapshot": {
+        "captured_at": "2026-10-27T00:00:00+00:00",
+        "format": "pepeuch-ai.discovery-cache/v1",
+        "records": [
+          {
+            "attributes": {
+              "container_version": "1.5.0",
+              "context_window": 0,
+              "profiles": [
+                {
+                  "disk_space_per_device_gb": null,
+                  "feat_lora": false,
+                  "gpu": [
+                    "RTX A2000"
+                  ],
+                  "gpu_device": [
+                    "2571:10de"
+                  ],
+                  "inference_backend": null,
+                  "max_gpu_count": null,
+                  "min_cpu_count": null,
+                  "min_driver_version": null,
+                  "min_vram_per_device_gb": 8.0,
+                  "pipeline_parallel_size": null,
+                  "precision": null,
+                  "profile_id": "opaque-id-1",
+                  "system_memory_per_device_gb": null,
+                  "tensor_parallel_size": 1,
+                  "tested_gpu_devices": [],
+                  "workspace_hash": "opaque-digest"
+                }
+              ],
+              "profiles_count": 1,
+              "registry_entitlement": "unknown",
+              "related_urls": null,
+              "tool_calling": false,
+              "vgpu_support": true
+            },
+            "display_name": "parakeet-1-1b-rnnt-multilingual",
+            "entity_type": "nim_microservice",
+            "payload_sha256": "7586e843967960116fdc8fcbfa0a8da77bdaac4fd8160910800610d5aa367d11",
+            "raw_metadata": {
+              "features": {
+                "context_window": 0,
+                "tool_calling": false,
+                "vgpu_support": true
+              },
+              "profiles": [
+                {
+                  "feat_lora": false,
+                  "gpu": "RTX A2000",
+                  "gpu_device": "2571:10de",
+                  "min_vram_per_device_gb": 8,
+                  "profile_id": "opaque-id-1",
+                  "tensor_parallel_size": 1,
+                  "tested_gpu_devices": [],
+                  "workspace_hash": "opaque-digest"
+                }
+              ],
+              "release_details": {
+                "container_version": "1.5.0"
+              }
+            },
+            "record_key": "d_3446bd13f9f0879e9bac0be741d6c2841786fe9d77f01afc0d5f56372e4eb584",
+            "relationships": [],
+            "source": "nvidia-nim-metadata",
+            "source_id": "nim/nvidia/parakeet-1-1b-rnnt-multilingual",
+            "source_revision": "1.5.0"
+          }
+        ],
+        "scope": {
+          "nvidia-nim-metadata": {
+            "mode": "exact_tag",
+            "resource_id": "nim/nvidia/parakeet-1-1b-rnnt-multilingual",
+            "tag": "1.5.0"
+          }
+        },
+        "snapshot_id": "s_c101561e0e56433aab875c861c2ce9e1930d60d909fdbe582397d4a6d16c532c"
+      }
+    }
+  },
+  "synthetic": true
+}

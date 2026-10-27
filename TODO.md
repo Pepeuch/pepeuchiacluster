@@ -175,6 +175,15 @@ Le connecteur est opérationnel pour les métadonnées publiques en lecture seul
 L'accès réel à l'inférence n'a pas été testé. Le Discovery Service automatisé
 reste à développer ; ces validations portent sur des sondes et imports manuels.
 
+**Checkpoint B4.0 — 27 octobre 2026 (contrats caractérisés, sans changement métier)**
+
+- [x] Documenter la matrice des sept connecteurs, leurs identités, sélections, révisions, accès, inconnues, provenance, relations et transports ; voir [CONTRACTS_B40.md](database/poc/CONTRACTS_B40.md).
+- [x] Extraire les références littérales du commit publié B3.3 : sept SourceRecord, clés B2, empreintes de payload, snapshots déterministes et comparaison partielle ; aucun attendu recalculé automatiquement par les tests.
+- [x] Valider 108 tests, dont 17 tests de caractérisation ; conserver les sorties B2/B3 et les 91 tests historiques, sans réseau ni modification de base.
+- [x] Caractériser NIM : identité par resourceId, tag mutable en révision, plusieurs tags du même service refusés dans un snapshot ; aucune modification de cette règle.
+- [ ] Décider la sémantique future des accès/visibilités, de l'isolation domaines/comptes, des révisions et des collectes partielles avant toute évolution de format ou d'identité.
+- [ ] Consolider les primitives sans changer les snapshots de référence : secrets récursifs, copie défensive, parsing JSON et erreurs sûres ; voir [B4_JOURNAL.md](database/poc/B4_JOURNAL.md).
+
 ---
 
 # Phase 2 — Choix et POC de la base de données
