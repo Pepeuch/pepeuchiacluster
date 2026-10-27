@@ -1,17 +1,19 @@
 """Explicit local worker runner. No direct SQLite/filesystem business access."""
 
-from urllib.error import HTTPError, URLError
+from http.client import HTTPConnection, HTTPException
+import re
 from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 from uuid import uuid4
 
 from .contracts import Executor, Problem, canonical, decode_json
 from .demo import FakeWorker
+from .http_io import DeadlineSocket
 
 
-class NoRedirect(HTTPRedirectHandler):
-    def redirect_request(self, request, fp, code, msg, headers, newurl):
-        return None
+class LocalConnection(HTTPConnection):
+    def connect(self):
+        super().connect()
+        self.sock = DeadlineSocket(self.sock)
 
 
 class LocalClient:
@@ -26,26 +28,34 @@ class LocalClient:
         if not valid:
             raise Problem("worker_loopback_only")
         self.base_url = base_url.rstrip("/")
+        self.port = parsed.port
         self.credential = credential
-        self.opener = build_opener(ProxyHandler({}), NoRedirect())
 
     def call(self, method, path, data=None):
-        if not path.startswith("/api/v1/execution/") or "?" in path or "#" in path:
+        if (method not in {"GET", "POST"} or re.fullmatch(r"/api/v1/execution/(?:claim|a_[0-9a-f]{32}/(?:state|finish))", path) is None):
             raise Problem("invalid_worker_route")
         raw = None if data is None else canonical(data).encode()
-        request = Request(self.base_url + path, data=raw, method=method,
-                          headers={"Authorization": "Bearer " + self.credential, "Content-Type": "application/json"})
+        connection = LocalConnection("127.0.0.1", self.port, timeout=5)
         try:
-            with self.opener.open(request, timeout=5) as response:
+            connection.request(method, path, body=raw, headers={"Authorization": "Bearer " + self.credential, "Content-Type": "application/json"})
+            with connection.getresponse() as response:
+                if response.status != 200:
+                    raise Problem("worker_request_refused", 409)
+                lengths = response.headers.get_all("Content-Length", [])
+                types = response.headers.get_all("Content-Type", [])
+                if (len(lengths) != 1 or re.fullmatch(r"[0-9]{1,6}", lengths[0]) is None
+                        or int(lengths[0]) > 131072 or response.headers.get_all("Transfer-Encoding")
+                        or response.headers.get_all("Content-Encoding")
+                        or types != ["application/json; charset=utf-8"]):
+                    raise Problem("invalid_worker_response")
                 raw = response.read(131073)
-                if len(raw) > 131072:
+                if len(raw) != int(lengths[0]):
                     raise Problem("invalid_worker_response")
                 return decode_json(raw)
-        except HTTPError as exc:
-            exc.close()
-            raise Problem("worker_request_refused", 409) from None
-        except (URLError, OSError):
+        except (HTTPException, OSError, ValueError):
             raise Problem("backend_unavailable", 503) from None
+        finally:
+            connection.close()
 
 
 class WorkerRunner:
