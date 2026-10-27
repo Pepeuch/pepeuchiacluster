@@ -31,6 +31,12 @@ def main():
             run.add_argument("--loop", action="store_true", help="Boucle locale explicitement démarrée")
             sub.add_argument("--interactive", action="store_true", help="Attendre Entrée après attribution")
             sub.add_argument("--mode", choices=("success", "fail", "interrupt", "hold"), default="success")
+    backup_parser = commands.add_parser("backup", help="Sauvegarde privée, backend arrêté")
+    backup_parser.add_argument("--data-dir", type=Path, required=True)
+    backup_parser.add_argument("--destination", type=Path, required=True)
+    restore_parser = commands.add_parser("restore", help="Restaurer dans un répertoire inexistant")
+    restore_parser.add_argument("--backup-dir", type=Path, required=True)
+    restore_parser.add_argument("--data-dir", type=Path, required=True)
     args = parser.parse_args()
     try:
         if args.command == "init":
@@ -45,7 +51,7 @@ def main():
                     server.serve_forever()
             finally:
                 service.close()
-        else:
+        elif args.command == "worker":
             root = private_directory(args.data_dir)
             private_directory(root / "secrets")
             credential = read_private(root / "secrets" / "worker.token", 256).decode("ascii").strip()
@@ -59,6 +65,14 @@ def main():
                 if not args.loop:
                     break
                 threading.Event().wait(1)
+        elif args.command == "backup":
+            from .backup import create_backup
+            create_backup(args.data_dir, args.destination)
+            print("Sauvegarde hors ligne vérifiée. Credentials exclus ; conserver le dossier privé.")
+        elif args.command == "restore":
+            from .backup import restore_backup
+            restore_backup(args.backup_dir, args.data_dir)
+            print("Restauration vérifiée. Nouvelles clés locales ; réenrôlement des workers requis.")
         return 0
     except KeyboardInterrupt:
         return 0

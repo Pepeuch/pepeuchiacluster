@@ -29,3 +29,37 @@ Références officielles : [syntaxe et framing RFC 9112](https://www.rfc-editor.
 Il ne s'agit ni d'une implémentation HTTP générale ni d'une validation production.
 Pas de TLS, exposition LAN, reverse proxy, débit garanti ou préemption de logique
 métier. Les délais bornent les I/O, pas une fonction métier bloquée.
+
+## B5.2b — sauvegarde/restauration hors ligne
+
+IMPLÉMENTÉ : `backup` et `restore`, explicitement lancés en CLI. Verrou exclusif
+de backend obligatoire ; refus d'un journal SQLite/WAL restant à récupérer.
+Index en lecture seule, contrôle d'intégrité/FK/schéma connu, références et SHA256
+des objets vérifiés. Référence : [sauvegardes SQLite](https://www.sqlite.org/backup.html)
+et [contrôles SQLite](https://www.sqlite.org/pragma.html#pragma_integrity_check).
+
+La sauvegarde est un **dossier privé 0700**, pas une archive publiable : SQLite,
+les deux fichiers de configuration connus, objets référencés et manifeste versionné.
+Secrets, logs, staging et objets orphelins sont exclus, sans suppression côté source.
+Les données applicatives peuvent être privées : ne jamais partager ce dossier
+comme s'il était expurgé de tout contenu sensible. Les SHA256 détectent une
+corruption, pas un remplacement malveillant de tout le manifeste.
+
+La destination doit être inexistante ; création exclusive sans écrasement.
+Manifeste de sauvegarde écrit en dernier. À la restauration, validation intégrale
+avant création de destination, copie revérifiée, nouvelles clés et marqueur
+d'installation écrit en dernier. Une interruption conserve une copie incomplète
+privée et refusée ; aucune restauration/prune ou suppression automatique.
+Répertoire parent et compte local de confiance supposés, pas de garantie NFS.
+
+TESTÉ : 101 tests Control Plane cumulés (+16) ; mission → worker → publication →
+sauvegarde → restauration ailleurs → redémarrage → mêmes IDs, événements, octets
+et SHA256. Credentials source absents de la copie et refusés sur la restauration.
+Refus de source active, destination existante, schéma modifié, chemins/liens,
+index/manifestes/objets corrompus, références invalides et copies interrompues.
+Pas de simulation de panne électrique ni de sauvegarde hors machine déjà déployée.
+
+Limites bornées : index 256 Mio, manifeste 4 Mio, au plus 10 003 fichiers décrits
+et 2 Gio de contenu. Les backups dépassant le format/les limites sont refusés.
+Rétention sans purge. Les workers d'un registre restauré seront révoqués avant
+acceptation ; un réenrôlement explicite est requis dans le lot identité.
