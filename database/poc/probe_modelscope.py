@@ -8,6 +8,8 @@ downloads, token login, database ingestion, upload, or deployment.
 
 from __future__ import annotations
 
+from metadata_primitives import error_summary, strict_json_loads
+
 import argparse
 import json
 from pathlib import Path
@@ -51,13 +53,13 @@ def main() -> int:
             return 2
         except Exception as exc:
             # Avoid echoing third-party API error bodies or any configured token.
-            print(f"ModelScope online metadata unavailable ({type(exc).__name__}); no snapshot written", file=sys.stderr)
+            print(error_summary("ModelScope", exc), file=sys.stderr)
             return 1
     else:
         try:
-            data = json.loads(args.fixture.read_text(encoding="utf-8"))
+            data = strict_json_loads(args.fixture.read_text(encoding="utf-8"))
         except (OSError, ValueError, TypeError) as exc:
-            print(f"Could not read local ModelScope fixture: {type(exc).__name__}", file=sys.stderr)
+            print(error_summary("ModelScope fixture", exc), file=sys.stderr)
             return 1
 
     try:
@@ -69,7 +71,7 @@ def main() -> int:
             }},
         )
     except (TypeError, ValueError) as exc:
-        print(f"ModelScope metadata contract failed: {exc}", file=sys.stderr)
+        print(error_summary("ModelScope", exc), file=sys.stderr)
         return 1
     print(f"Prepared 1 ModelScope record; snapshot {snapshot['snapshot_id']}", file=sys.stderr)
     print(json.dumps(snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False))

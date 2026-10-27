@@ -11,6 +11,8 @@ import math
 import re
 from typing import Any, Literal
 
+from metadata_primitives import copy_metadata, nonempty_string as _string, object_value as _object
+
 
 EntityType = Literal[
     "model_reference", "model_artifact", "agent_resource", "nim_microservice", "inference_endpoint"
@@ -28,17 +30,13 @@ class SourceRecord:
     relationships: tuple[dict[str, str], ...]
     raw_metadata: dict[str, Any]
 
-
-def _object(value: Any, field: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(f"{field} must be an object")
-    return value
-
-
-def _string(value: Any, field: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{field} must be a nonempty string")
-    return value
+    def __post_init__(self) -> None:
+        # Own the nested data as well as the frozen outer record. Serialized
+        # B2 payloads stay identical; callers cannot mutate the input afterwards
+        # to change an already normalized record or sneak in credentials.
+        object.__setattr__(self, "attributes", copy_metadata(self.attributes))
+        object.__setattr__(self, "relationships", tuple(copy_metadata(list(self.relationships))))
+        object.__setattr__(self, "raw_metadata", copy_metadata(self.raw_metadata))
 
 
 def _optional_string(value: Any, field: str) -> str | None:

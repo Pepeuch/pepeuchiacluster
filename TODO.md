@@ -182,7 +182,15 @@ reste à développer ; ces validations portent sur des sondes et imports manuels
 - [x] Valider 108 tests, dont 17 tests de caractérisation ; conserver les sorties B2/B3 et les 91 tests historiques, sans réseau ni modification de base.
 - [x] Caractériser NIM : identité par resourceId, tag mutable en révision, plusieurs tags du même service refusés dans un snapshot ; aucune modification de cette règle.
 - [ ] Décider la sémantique future des accès/visibilités, de l'isolation domaines/comptes, des révisions et des collectes partielles avant toute évolution de format ou d'identité.
-- [ ] Consolider les primitives sans changer les snapshots de référence : secrets récursifs, copie défensive, parsing JSON et erreurs sûres ; voir [B4_JOURNAL.md](database/poc/B4_JOURNAL.md).
+- [x] Consolider les primitives sans changer les snapshots de référence : secrets récursifs, copie défensive, parsing JSON et erreurs sûres ; voir [B4_JOURNAL.md](database/poc/B4_JOURNAL.md).
+
+**Checkpoint B4.1 — 27 octobre 2026 (primitives communes validées)**
+
+- [x] Mutualiser seulement les validations équivalentes ; conserver les règles métier, signatures et CLI des sept sources.
+- [x] Copier défensivement SourceRecord, payloads et scopes ; rejeter récursivement les clés de credentials et décoder le JSON sans doublons ni valeurs non finies.
+- [x] Normaliser les diagnostics sans corps d'erreur ni valeur sensible ; préserver le cas NIM 404.
+- [x] Valider 122 tests et toutes les références B3.3 inchangées ; voir [PRIMITIVES_B41.md](database/poc/PRIMITIVES_B41.md).
+- [ ] Préparer le transport borné injectable sans retry, puis la conception du registre explicite, sans scheduler ni nouvelle collecte automatique.
 
 ---
 

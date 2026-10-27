@@ -5,6 +5,11 @@ Lot de caractérisation uniquement : aucun adaptateur, transport, générateur,
 schéma de base ou contrat métier modifié. État initial : **91 tests réussis**
 sur une extraction isolée du commit publié. B4.0 ajoute **17 tests**.
 
+Ce document décrit la référence B3.3 et le lot B4.0 historique. Depuis B4.1,
+les données sont copiées défensivement et le JSON est décodé strictement ; voir
+[PRIMITIVES_B41.md](PRIMITIVES_B41.md). Les valeurs sérialisées figées restent
+inchangées, y compris les observations historiques d'aliasing dans le JSON.
+
 Les types ci-dessous décrivent des ressources découvertes. `model_artifact`
 désigne les métadonnées d'un dépôt de modèle, sans certifier le téléchargement
 effectif des poids. Une référence, un agent, un microservice et une offre

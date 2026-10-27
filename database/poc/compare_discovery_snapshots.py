@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from metadata_primitives import error_summary, strict_json_loads
+
 import argparse
 import json
 from pathlib import Path
@@ -18,12 +20,12 @@ def main() -> int:
     args = parser.parse_args()
     try:
         with args.before.open("r", encoding="utf-8") as handle:
-            old = json.load(handle)
+            old = strict_json_loads(handle.read())
         with args.after.open("r", encoding="utf-8") as handle:
-            new = json.load(handle)
+            new = strict_json_loads(handle.read())
         result = compare_snapshots(old, new)
     except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
-        print(f"Discovery comparison failed: {exc}", file=sys.stderr)
+        print(error_summary("Discovery comparison", exc), file=sys.stderr)
         return 1
     print(json.dumps(result, indent=2, ensure_ascii=False, sort_keys=True))
     return 0

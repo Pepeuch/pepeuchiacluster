@@ -6,19 +6,15 @@ Pure normalization; no inference, authentication, network or database writes.
 
 from __future__ import annotations
 
-import json
 import re
 from typing import Any
 
 from source_adapters import SourceRecord
+from metadata_primitives import copy_metadata as _json_copy
 
 
 API_BASE = "https://moark.ai/v1"
 CATALOG_URL = API_BASE + "/models?type=text2text&include_details=false"
-_SECRET_KEYS = {
-    "api_key", "api_token", "access_token", "authorization", "credentials",
-    "password", "secret", "token", "refresh_token", "cookie", "set_cookie",
-}
 
 
 def model_id(value: Any) -> str:
@@ -28,24 +24,6 @@ def model_id(value: Any) -> str:
             or any(part in ("", ".", "..") for part in value.split("/"))):
         raise ValueError("Invalid MoArk model ID")
     return value
-
-
-def _secret_free(value: Any) -> None:
-    if isinstance(value, dict):
-        for key, child in value.items():
-            if not isinstance(key, str):
-                raise ValueError("MoArk metadata keys must be strings")
-            if key.lower().replace("-", "_") in _SECRET_KEYS:
-                raise ValueError("Refusing credential-like MoArk metadata")
-            _secret_free(child)
-    elif isinstance(value, list):
-        for child in value:
-            _secret_free(child)
-
-
-def _json_copy(value: dict[str, Any]) -> dict[str, Any]:
-    _secret_free(value)
-    return json.loads(json.dumps(value, ensure_ascii=False, allow_nan=False))
 
 
 def normalize_moark_model(data: dict[str, Any], *, requested_id: str) -> SourceRecord:

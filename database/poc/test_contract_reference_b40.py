@@ -323,18 +323,20 @@ class ContractReferenceB40Tests(unittest.TestCase):
                 normalize(source, data)
                 self.assertEqual(canonical_json(data), before)
 
-    def test_existing_raw_input_aliasing_is_characterized_without_fixing_it(self):
+    def test_b41_defensive_copy_preserves_baseline_raw_values_without_aliasing(self):
         for source in SOURCES[1:]:
             with self.subTest(source=source):
                 data = input_data(source)
                 record = normalize(source, data)
                 target = data["data"][0] if source == "moark" else data
-                expected_shared = self.reference["ownership"][source]["raw_input_shared"]
-                self.assertEqual(record.raw_metadata is target, expected_shared)
+                # Keep B3.3's ownership observations in the frozen file. B4.1
+                # intentionally strengthens ownership, not serialized values.
+                self.assertIn("raw_input_shared", self.reference["ownership"][source])
+                self.assertIsNot(record.raw_metadata, target)
                 target["b40_future"] = {"changed_after_normalization": True}
-                self.assertEqual("b40_future" in record.raw_metadata, expected_shared)
+                self.assertNotIn("b40_future", record.raw_metadata)
 
-    def test_existing_snapshot_aliasing_is_detectable_but_not_fixed_in_b40(self):
+    def test_b41_snapshot_copy_keeps_serialized_b33_reference_after_record_mutation(self):
         for source in SOURCES:
             with self.subTest(source=source):
                 record = normalize(source)
@@ -342,14 +344,17 @@ class ContractReferenceB40Tests(unittest.TestCase):
                 snapshot = make_snapshot([record], scope=scope, captured_at=CAPTURED_AT)
                 entry = snapshot["records"][0]
                 observed = self.reference["ownership"][source]
-                self.assertEqual(entry["attributes"] is record.attributes, observed["snapshot_attributes_shared"])
-                self.assertEqual(entry["raw_metadata"] is record.raw_metadata, observed["snapshot_raw_shared"])
-                self.assertEqual(snapshot["scope"] is scope, observed["snapshot_scope_shared"])
+                self.assertTrue(observed["snapshot_attributes_shared"])
+                self.assertTrue(observed["snapshot_raw_shared"])
+                self.assertTrue(observed["snapshot_scope_shared"])
+                self.assertIsNot(entry["attributes"], record.attributes)
+                self.assertIsNot(entry["raw_metadata"], record.raw_metadata)
+                self.assertIsNot(snapshot["scope"], scope)
                 # Serializing then loading detaches a persisted observation.
                 persisted = json.loads(canonical_json(snapshot))
                 record.attributes["b40_future"] = [False, 0]
-                with self.assertRaisesRegex(ValueError, "digest mismatch"):
-                    validate_snapshot(snapshot)
+                validate_snapshot(snapshot)
+                self.assertEqual(snapshot, self.expected(source))
                 self.assertEqual(persisted, self.expected(source))
                 validate_snapshot(persisted)
 

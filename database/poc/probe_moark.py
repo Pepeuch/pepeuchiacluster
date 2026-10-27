@@ -6,6 +6,8 @@ No tokens, inference requests, weights, database imports or automatic retries.
 
 from __future__ import annotations
 
+from metadata_primitives import error_summary, strict_json_loads
+
 import argparse
 import json
 from pathlib import Path
@@ -35,7 +37,7 @@ def read_online(requested_id: str) -> dict:
         payload = response.read(MAX_METADATA_BYTES + 1)
     if len(payload) > MAX_METADATA_BYTES:
         raise ValueError("MoArk metadata response exceeded size limit")
-    data = json.loads(payload.decode("utf-8"))
+    data = strict_json_loads(payload)
     if not isinstance(data, dict):
         raise ValueError("MoArk roster must be an object")
     return data
@@ -50,7 +52,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         model_id(args.model_id)
-        data = read_online(args.model_id) if args.online else json.loads(args.fixture.read_text(encoding="utf-8"))
+        data = read_online(args.model_id) if args.online else strict_json_loads(args.fixture.read_text(encoding="utf-8"))
         record = select_moark_model(data, requested_id=args.model_id)
         snapshot = make_snapshot([record], scope={"moark": {
             "mode": "exact_ids", "ids": [args.model_id], "endpoint": API_BASE,
@@ -59,11 +61,11 @@ def main() -> int:
         }})
         validate_snapshot(snapshot)
     except HTTPError as exc:
-        print(f"MoArk metadata probe failed (HTTP {exc.code}); no snapshot written", file=sys.stderr)
+        print(error_summary("MoArk", exc), file=sys.stderr)
         return 1
     except (OSError, ValueError, TypeError, UnicodeError) as exc:
         # Do not echo third-party response bodies, tokens, URLs or field values.
-        print(f"MoArk metadata probe failed ({type(exc).__name__}); no snapshot written", file=sys.stderr)
+        print(error_summary("MoArk", exc), file=sys.stderr)
         return 1
     print(f"Prepared 1 MoArk inference endpoint; snapshot {snapshot['snapshot_id']}", file=sys.stderr)
     print(json.dumps(snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False))

@@ -7,19 +7,15 @@ CSGHub, Hugging Face, and ModelScope remain separate identity namespaces.
 
 from __future__ import annotations
 
-import json
 import re
 from typing import Any
 
 from source_adapters import SourceRecord
+from metadata_primitives import copy_metadata, optional_nonnegative_int
 
 
 _REPO_PART = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _SHA = re.compile(r"^[0-9a-fA-F]{40}(?:[0-9a-fA-F]{24})?$")
-_SECRET_KEYS = {
-    "api_key", "api_token", "access_token", "authorization", "credentials",
-    "password", "secret", "token", "private_key", "cookie", "set-cookie",
-}
 
 
 def model_id(value: Any) -> str:
@@ -31,19 +27,6 @@ def model_id(value: Any) -> str:
     return value
 
 
-def _check_secrets(value: Any) -> None:
-    if isinstance(value, dict):
-        for key, child in value.items():
-            if not isinstance(key, str):
-                raise ValueError("CSGHub metadata keys must be strings")
-            if key.lower() in _SECRET_KEYS:
-                raise ValueError("Refusing credential-like CSGHub metadata")
-            _check_secrets(child)
-    elif isinstance(value, list):
-        for child in value:
-            _check_secrets(child)
-
-
 def _optional_string(value: Any, field: str) -> str | None:
     if value is None:
         return None
@@ -53,11 +36,7 @@ def _optional_string(value: Any, field: str) -> str | None:
 
 
 def _optional_count(value: Any, field: str) -> int | None:
-    if value is None:
-        return None
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise ValueError(f"CSGHub {field} must be a nonnegative integer or null")
-    return value
+    return optional_nonnegative_int(value, f"CSGHub {field}")
 
 
 def _optional_bool(value: Any, field: str) -> bool | None:
@@ -81,9 +60,8 @@ def normalize_csghub_model(data: dict[str, Any], *, requested_id: str) -> Source
     requested_id = model_id(requested_id)
     if not isinstance(data, dict):
         raise ValueError("CSGHub model metadata must be an object")
-    _check_secrets(data)
     # Keep raw metadata JSON-native and reject NaN, infinity, or custom types.
-    raw = json.loads(json.dumps(data, ensure_ascii=False, allow_nan=False))
+    raw = copy_metadata(data)
     if model_id(raw.get("id")) != requested_id:
         raise ValueError("CSGHub response ID differs from requested model")
 

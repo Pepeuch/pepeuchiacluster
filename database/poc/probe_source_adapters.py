@@ -7,6 +7,8 @@ The output is a compact JSON summary without tokens or full metadata.
 
 from __future__ import annotations
 
+from metadata_primitives import error_summary, strict_json_loads
+
 import argparse
 import json
 import re
@@ -46,7 +48,7 @@ def get_json(url: str, timeout: int) -> dict:
         body = response.read(MAX_RESPONSE_BYTES + 1)
     if len(body) > MAX_RESPONSE_BYTES:
         raise ValueError("Source response exceeds audit size limit")
-    result = json.loads(body)
+    result = strict_json_loads(body)
     if not isinstance(result, dict):
         raise ValueError("Source response must be a JSON object")
     return result
@@ -159,7 +161,7 @@ def main() -> int:
                     args.timeout, resource_id=args.nim_resource_id, tag=args.nim_tag,
                 )
     except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
-        print(f"Source audit failed: {exc}", file=sys.stderr)
+        print(error_summary("Source audit", exc), file=sys.stderr)
         return 1
     print(json.dumps(result, indent=2, ensure_ascii=False, sort_keys=True))
     return 0
