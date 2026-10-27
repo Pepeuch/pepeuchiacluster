@@ -132,8 +132,11 @@ OpenAI / Mistral / autres providers
 - [x] Installer Docker Engine 29.9.2, Compose v5.6.1 ; `hello-world` réussi, service actif et activé au démarrage.
 - [x] Préparer `/opt/pepeuch-ai/{repo,config,data,logs,backups}`.
 - [x] Créer le volume Docker `pepeuch-ai-poc_postgres_data` et confirmer la persistance d'une donnée après redémarrage de PostgreSQL.
+- [x] Configurer le stockage persistant SurrealDB/RocksDB (`/opt/pepeuch-ai/data/surreal-poc`) et confirmer les 405 modèles après redémarrage.
+- [x] Corriger le healthcheck SurrealDB (`/surreal is-ready`) ; conteneur `Healthy`.
+- [x] Limiter le cache RocksDB à 512 Mio (`SURREAL_ROCKSDB_BLOCK_CACHE_SIZE=536870912`) et les tampons d'écriture du POC.
 - [ ] Définir et vérifier une sauvegarde/restauration Proxmox de la VM 150 avant d'y stocker des données irremplaçables.
-- [ ] Vérifier les healthchecks de l'ensemble des services (le healthcheck PostgreSQL est configuré, mais son état `healthy` n'a pas encore été confirmé).
+- [ ] Vérifier les healthchecks de l'ensemble des services (SurrealDB confirmé `Healthy` ; état `healthy` de PostgreSQL encore à confirmer).
 - [ ] Reprendre le passthrough RTX A2000 : échec VFIO/FLR (`stuck in D3`), validation GPU dans la VM reportée ; ne pas bloquer le POC CPU.
 
 **Jalon :** un conteneur Docker peut utiliser correctement l'A2000.
@@ -148,14 +151,18 @@ Objectif : choisir le moteur de données avant de figer le schéma.
 
 - [x] Démarrer PostgreSQL 16.15 (`postgres:16-alpine`) via Compose, sur un réseau interne sans port publié.
 - [x] Valider la connexion SQL, l'écriture et la lecture après redémarrage du conteneur.
-- [x] Préparer le schéma `poc.external_models` et l'importeur TOML → SQL/COPY avec provenance Git ; 2 tests unitaires réussis sur Debian 13.
+- [x] Préparer le schéma `poc.external_models` et l'importeur TOML → SQL/COPY avec provenance Git ; 2 tests PostgreSQL réussis.
 - [x] Analyser les 405 TOML du submodule épinglé : 405 fichiers analysés, aucune erreur.
-- [ ] Vérifier la génération intégrale du flux SQL et importer réellement les 405 fiches dans PostgreSQL.
-- [ ] Vérifier le volume après recréation du conteneur, puis sauvegarde **et restauration** dans une base de test.
-- [ ] Réaliser le POC SurrealDB et comparer sur les mêmes données/requêtes ; aucune décision de moteur à ce stade.
+- [x] Générer le flux SQL et importer réellement les 405 fiches dans PostgreSQL ; 405 enregistrements confirmés.
+- [x] Vérifier le volume PostgreSQL après recréation du conteneur ; sauvegarde `pg_dump` et restauration dans une base de test vérifiées.
+- [x] Déployer SurrealDB 3.3.4/RocksDB via Compose avec réseau interne, stockage persistant et healthcheck corrigé.
+- [x] Préparer l'importeur TOML → SurrealQL ; 3 tests supplémentaires réussis (5 tests Python au total), 405 `UPSERT` validés et importés.
+- [x] Comparer les six compteurs PostgreSQL/SurrealDB : 405 modèles, 196 open weights, 397 contextes positifs, 8 nuls, 154 poids, 135 benchmarks.
+- [x] Confirmer les 405 modèles SurrealDB après redémarrage ; exporter et restaurer la sauvegarde dans `poc_restore_20261027`.
+- [ ] Comparer les moteurs sur les **mêmes requêtes représentatives**, index et mesures de performance ; aucun choix arrêté.
 
-- [ ] Faire un POC **PostgreSQL vs SurrealDB**
-- [ ] Importer un échantillon réel de `models.dev`
+- [ ] Finaliser le POC comparatif **PostgreSQL vs SurrealDB** (performances, graphe, vecteurs et contraintes d'exploitation).
+- [x] Importer un échantillon réel de `models.dev` dans les deux moteurs (ici les 405 TOML du snapshot épinglé).
 - [ ] Tester les requêtes représentatives :
   - modèle → base model → quantification
   - modèle → provider → coût
@@ -164,7 +171,7 @@ Objectif : choisir le moteur de données avant de figer le schéma.
   - modèle → benchmark local
 - [ ] Tester la recherche vectorielle / hybride
 - [ ] Tester relations de graphe et liens typés
-- [ ] Tester sauvegarde / restauration
+- [x] Tester sauvegarde / restauration sur les deux POC, dans des bases distinctes des sources.
 - [ ] Tester Docker et consommation mémoire
 - [ ] Vérifier précisément les contraintes de licence de SurrealDB avant adoption
 - [ ] Décider du moteur principal
@@ -204,14 +211,15 @@ Objectif : exploiter les catalogues existants au lieu de reconstruire leur trava
 
 - [x] Ajouter `anomalyco/models.dev` comme **git submodule**
 - [x] Épingler un commit précis (`5e9fdbc3d88cb831627a93dc1362cc10773c176c`)
-- [ ] Enregistrer le SHA de source lors des imports
+- [x] Enregistrer le SHA de source lors des imports PostgreSQL et SurrealDB du POC
 - [ ] Exploiter prioritairement :
   - `models.json`
   - `catalog.json`
   - fichiers TOML `models/`
   - fichiers TOML `providers/`
 - [ ] Créer un adapter/importer générique et indépendant du moteur de base de données
-- [x] Préparer un importeur POC PostgreSQL (CSV/COPY + JSONB), testé hors base ; import réel encore à valider
+- [x] Préparer et valider l'importeur POC PostgreSQL (CSV/COPY + JSONB) ; 405 modèles réellement importés
+- [x] Préparer et valider l'importeur POC SurrealDB (SurrealQL + métadonnées brutes) ; 405 modèles réellement importés
 - [ ] Ne jamais faire dépendre le selector directement de leur format
 - [ ] Détecter les deltas lors des mises à jour du submodule
 - [ ] Conserver licence, provider, prix, contexte, modalités, reasoning, tool calling, structured output, open weights et liens vers poids/benchmarks

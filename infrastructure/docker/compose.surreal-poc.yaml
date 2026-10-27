@@ -1,0 +1,40 @@
+name: pepeuch-ai-surreal-poc
+
+services:
+  surrealdb:
+    image: surrealdb/surrealdb:v3.3.4
+  
+    environment:
+        SURREAL_ROCKSDB_BLOCK_CACHE_SIZE: "536870912"
+        SURREAL_ROCKSDB_WRITE_BUFFER_SIZE: "33554432"
+        SURREAL_ROCKSDB_MAX_WRITE_BUFFER_NUMBER: "2"
+
+    user: "1000:1000"
+
+    command:
+      - start
+      - rocksdb:/data/surreal.db
+
+    env_file:
+      - /opt/pepeuch-ai/config/surrealdb-poc.env
+
+    volumes:
+      - /opt/pepeuch-ai/data/surreal-poc:/data
+
+    networks:
+      - backend
+
+    healthcheck:
+      test:
+        - CMD
+        - /surreal
+        - is-ready
+        - --endpoint
+        - http://127.0.0.1:8000
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+networks:
+  backend:
+    internal: true
