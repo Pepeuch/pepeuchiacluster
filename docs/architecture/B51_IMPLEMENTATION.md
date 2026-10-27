@@ -38,3 +38,23 @@ statique pourra charger le formulaire d'authentification, sans données privées
 
 TESTÉ à ce checkpoint : 15 tests B5.1, 272 tests historiques initiaux inchangés.
 Les lots suivants ajouteront l'exécution simulée, les objets persistants et l'UI.
+
+## B5.1b — exécution séparée
+
+IMPLÉMENTÉ : `ExecutionManager` pour les tâches, tentatives et baux ; interface
+`Coordinator` et plan consultable ; interface `Executor` et worker déterministe.
+SIMULÉ : rôle `demo-report`, capacité déclarée `demo.report.v1`, worker `fake-cpu`.
+Aucun modèle, matériel GPU ou benchmark n'est associé à cette déclaration.
+
+L'approbation explicite journalise `draft → approved → queued` en une transaction.
+Réclamer une tâche crée une tentative/génération nouvelles et passe à `running`.
+Le worker n'exécute que la transformation texte prévue, sans outil ou interpréteur.
+`failed`/`interrupted` ne sont repris qu'après une demande explicite. L'annulation
+active devient `cancel_requested`, puis `cancelled` après accusé du worker ; une
+expiration ou un redémarrage clôture la tentative comme `interrupted` et refuse
+ses résultats tardifs. Un redémarrage ne réexécute aucune tâche de lui-même.
+
+TESTÉ : 30 tests B5.1 cumulés, dont transitions, double approbation/réclamation,
+capacité d'une seule tâche active, échec/interruption/annulation, expiration,
+générations, absence de réseau/shell/attente et refus de terminer sans publication.
+La publication durable réussie sera raccordée et testée dans B5.1c.

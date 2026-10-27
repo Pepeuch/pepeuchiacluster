@@ -14,9 +14,16 @@ from .storage import Store
 
 
 class ControlPlane:
-    def __init__(self, root, *, clock=time.time, settings=None):
+    def __init__(self, root, *, clock=time.time, settings=None, coordinator=None):
         self.store = Store(root, settings=settings)
         self.clock = clock
+        from .execution import ExecutionManager
+        try:
+            self.execution = ExecutionManager(self, coordinator)
+            self.execution.recover()
+        except BaseException:
+            self.store.close()
+            raise
 
     def close(self):
         self.store.close()
@@ -60,8 +67,8 @@ class ControlPlane:
         self._audit(con, principal, row["workspace_id"], row["id"], "mission_state", details)
         return con.execute("SELECT * FROM missions WHERE id=?", (row["id"],)).fetchone()
 
-    def _operate(self, principal, operation, action, payload, effect):
-        require_role(principal, "admin")
+    def _operate(self, principal, operation, action, payload, effect, *, role="admin"):
+        require_role(principal, role)
         operation_id(operation)
         request_hash = sha256(canonical({"action": action, "payload": payload}).encode())
         with self.store.transaction() as con:
@@ -102,11 +109,14 @@ class ControlPlane:
         return self._operate(principal, data["operation_id"], "create_mission", data, effect)
 
     def get_mission(self, principal, identity):
+        require_role(principal, "admin")
+        self.execution.expire()
         with self.store.transaction() as con:
             return self._view(con, self._mission(con, principal, identity))
 
     def list_missions(self, principal):
         require_role(principal, "admin")
+        self.execution.expire()
         with self.store.transaction() as con:
             rows = con.execute("SELECT * FROM missions WHERE owner=? ORDER BY created_at DESC,id DESC LIMIT 200", (principal.identity,)).fetchall()
             return [self._view(con, row) for row in rows]
@@ -116,3 +126,13 @@ class ControlPlane:
             self._mission(con, principal, identity)
             return [AuditEvent(r["id"], r["sequence"], r["mission_id"], r["workspace_id"], r["actor"], r["at"], r["type"], decode_json(r["details"])).to_dict()
                     for r in con.execute("SELECT * FROM events WHERE mission_id=? ORDER BY sequence", (identity,))]
+
+    def dashboard(self, principal):
+        require_role(principal, "admin")
+        self.execution.expire()
+        with self.store.transaction() as con:
+            counts = {row["state"]: row["count"] for row in con.execute("SELECT state,COUNT(*) AS count FROM missions WHERE owner=? GROUP BY state", (principal.identity,))}
+            active = con.execute("SELECT id,title,state FROM missions WHERE owner=? AND state IN ('running','cancel_requested') LIMIT 1", (principal.identity,)).fetchone()
+        return {"mission_count": sum(counts.values()), "queued_tasks": counts.get("queued", 0),
+                "completed_tasks": counts.get("completed", 0), "active_mission": None if active is None else dict(active),
+                "nodes": self.execution.nodes(principal), "simulation_only": True}

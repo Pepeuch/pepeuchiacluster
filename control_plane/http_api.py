@@ -11,7 +11,7 @@ import threading
 from urllib.parse import urlsplit
 
 from .auth import Authenticator, require_role
-from .contracts import Problem, canonical, decode_json
+from .contracts import ExecutionResult, Problem, canonical, decode_json
 
 
 @dataclass
@@ -27,6 +27,11 @@ class API:
         self.auth = Authenticator(service.store.root)
 
     def dispatch(self, method, path, principal, data=None):
+        if method == "POST" and path == "/api/v1/execution/claim":
+            return Response(self.service.execution.claim(principal, data))
+        matched = re.fullmatch(r"/api/v1/execution/([a-z]_[0-9a-f]{32})/finish", path)
+        if method == "POST" and matched:
+            return Response(self.service.execution.finish(principal, matched[1], ExecutionResult.from_dict(data)))
         require_role(principal, "admin")
         if method == "GET" and path == "/api/v1/health":
             return Response({"schema": "pepeuch.control-plane/health/v1", "status": "ok", "simulation_only": True})
@@ -37,6 +42,13 @@ class API:
                 return Response(self.service.create_mission(principal, data), 201)
         if method == "GET" and path == "/api/v1/workspaces":
             return Response({"workspaces": self.service.workspaces(principal)})
+        if method == "GET" and path == "/api/v1/dashboard":
+            return Response(self.service.dashboard(principal))
+        if method == "GET" and path == "/api/v1/nodes":
+            return Response({"nodes": self.service.execution.nodes(principal)})
+        matched = re.fullmatch(r"/api/v1/missions/([a-z]_[0-9a-f]{32})/(approve|cancel|retry)", path)
+        if method == "POST" and matched:
+            return Response(getattr(self.service.execution, matched[2])(principal, matched[1], data))
         matched = re.fullmatch(r"/api/v1/missions/([a-z]_[0-9a-f]{32})(/events)?", path)
         if matched and method == "GET":
             identity, events = matched.groups()
