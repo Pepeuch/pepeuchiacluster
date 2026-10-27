@@ -150,6 +150,16 @@ OpenAI / Mistral / autres providers
 - [x] Importer le snapshot réel dans PostgreSQL et SurrealDB : 12 ressources par moteur, réimportation idempotente et 405 modèles historiques conservés.
 - [ ] Étendre les sondes à plusieurs modèles et formats ; vérifier les révisions, fichiers, relations et éventuelles restrictions d'accès. L'API sondée ne fournit pas de SHA Git exploitable.
 
+**Checkpoint B3.2 — 27 octobre 2026 (OpenCSG/CSGHub POC validé)**
+
+- [x] Identifier l'API officielle CSGHub et distinguer les dépôts de modèles de la passerelle d'inférence.
+- [x] Développer un adaptateur `model_artifact` indépendant de Hugging Face et ModelScope, avec identité et provenance propres.
+- [x] Valider 76/76 tests Python sur la VM, dont 14 tests spécifiques à CSGHub.
+- [x] Sonder réellement `OpenCSG/csg-wukong-1B` : SHA Git complet, 9 fichiers référencés et format Safetensors observé.
+- [x] Préserver les métadonnées inconnues : licence non vérifiée et autorisation de téléchargement non déduite de la visibilité publique.
+- [x] Importer et réimporter les métadonnées dans PostgreSQL et SurrealDB : 13 ressources par moteur, sans doublon et avec les 405 modèles historiques préservés.
+- [ ] Étendre les sondes à d'autres dépôts et étudier séparément les ressources datasets, spaces, MCP, skills et les modèles servis par l'AI Gateway.
+
 ---
 
 # Phase 2 — Choix et POC de la base de données
