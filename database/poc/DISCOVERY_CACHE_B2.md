@@ -44,11 +44,25 @@ et leur évolution est donc comparée même si la sélection (`scope`) ne change
 | `huggingface` | `model_artifact` | Deux dépôts publics, opt-in réseau |
 | `awesome-ai-agents` | `agent_resource` | 3 ressources par défaut, opt-in réseau |
 | `nvidia-nim-metadata` | `nim_microservice` | Un microservice/tag, opt-in réseau |
-| `modelscope` | `model_artifact` | Type prêt, **adaptateur à étudier** |
-| `csghub` | `model_artifact` ou `agent_resource` | Type prêt, **adaptateur à étudier** |
-| `moark` | `inference_endpoint` | Type prêt, **adaptateur à étudier** |
+| `modelscope` | `model_artifact` | [B3.1](MODELSCOPE_B3.md) : POC modèle ciblé validé sur la VM, imports et réimports PG/SurrealDB validés |
+| `csghub` | `model_artifact` | [B3.2](CSGHUB_B3.md) : POC modèle ciblé validé sur la VM ; ressources `agent_resource` encore à étudier |
+| `moark` | `inference_endpoint` | [B3.3](MOARK_B3.md) : POC validé sur la VM, 14 ressources par moteur après imports et réimports ; inférence non testée |
 
-Références officielles de la prochaine étude :
+Les sept connecteurs de métadonnées sont disponibles pour les périmètres
+ciblés décrits ici. Les validations B3.1, B3.2 et B3.3 sont des **POC manuels**,
+avec sondes en lecture seule et imports explicites. Elles ne constituent pas
+un Discovery Service automatisé : registre commun, exécution planifiée,
+quotas, reprise et suivi incrémental restent à développer. Les connecteurs
+B3 possèdent leurs propres sondes ; ils ne sont pas encore intégrés à l'option
+`--include-online` du collecteur B2.
+
+Clôture B3.3 sur Debian 13, le 27 octobre 2026 (résultats VM communiqués par
+l'utilisateur) : **91 tests**, **14 ressources PostgreSQL et 14 SurrealDB**,
+réimportation idempotente, **405 modèles historiques PostgreSQL préservés**.
+Le catalogue public MoArk a été sondé ; **aucun accès réel à l'inférence n'a
+été testé**. Le Discovery Cache reste distinct du Personal Model Catalog.
+
+Références officielles des études B3 :
 
 - ModelScope : https://github.com/modelscope/modelscope_hub
 - OpenCSG / CSGHub : https://github.com/OpenCSGs/csghub et https://www.opencsg.com/docs/en/csghub/101/introduction
@@ -58,23 +72,24 @@ Références officielles de la prochaine étude :
 prouve pas qu'elle sert le même fichier ou la même révision. Pas de fusion
 canonique sur la seule similitude des noms.
 
-### Lot de compatibilité à planifier (après B2)
+### Études B3 validées et extensions restantes
 
-1. **ModelScope** : sonder l'API officielle de métadonnées d'un dépôt modèle
-   connu ; conserver le `model_id`, sa révision, la licence, les fichiers,
-   les éventuelles restrictions d'accès et les liens de parenté *explicites*.
+1. **ModelScope** : B3.1 a validé les métadonnées d'un dépôt modèle connu et
+   leur import. Étendre l'échantillon et l'étude des révisions, licences,
+   fichiers, restrictions d'accès et liens de parenté *explicites*.
    Les datasets, Studios, agents et MCP ne deviennent pas automatiquement des
    `model_artifact` : chaque famille réclame un contrat adapté.
-2. **OpenCSG / CSGHub** : vérifier la forme et la version des réponses de son
-   API, la compatibilité déclarée avec Hugging Face et les identifiants réels
-   des variantes. Séparer modèles et ressources d'agents ; conserver l'origine
-   de chaque relation croisée, sans dédupliquer sur le nom.
-3. **MoArk / OSChina** : vérifier d'abord le périmètre de son catalogue, les
-   méthodes d'authentification et les conditions d'usage. Un modèle **servi**
-   par API doit être représenté comme `inference_endpoint` ; ne créer une fiche
-   `model_artifact` que si un dépôt de poids et une provenance sont prouvés.
+2. **OpenCSG / CSGHub** : B3.2 a validé l'API officielle de métadonnées d'un
+   dépôt modèle et son import. Les ressources d'agents et l'AI Gateway restent
+   à étudier séparément ; conserver l'origine de chaque relation croisée,
+   sans dédupliquer sur le nom.
+3. **MoArk / OSChina** : B3.3 a qualifié le catalogue public Serverless,
+   l'authentification documentée et l'import de son offre servie comme
+   `inference_endpoint`. L'accès réel à l'inférence n'a pas été testé. Ne créer
+   une fiche `model_artifact` que si un dépôt de poids et sa provenance sont
+   prouvés ; la bibliothèque Git/LFS est une surface distincte.
 
-Pour chaque source : commencer par **une sonde ciblée en lecture seule** et
+Pour chaque extension de source : commencer par **une sonde ciblée en lecture seule** et
 ses tests de contrat sur fixtures, sans compte requis si un endpoint public
 existe. Les quotas, les droits et les données de licence devront être vérifiés
 avant tout collecteur périodique. Ne jamais confondre `unknown` et `false`.

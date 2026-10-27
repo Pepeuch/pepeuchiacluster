@@ -160,6 +160,21 @@ OpenAI / Mistral / autres providers
 - [x] Importer et réimporter les métadonnées dans PostgreSQL et SurrealDB : 13 ressources par moteur, sans doublon et avec les 405 modèles historiques préservés.
 - [ ] Étendre les sondes à d'autres dépôts et étudier séparément les ressources datasets, spaces, MCP, skills et les modèles servis par l'AI Gateway.
 
+**Checkpoint B3.3 — 27 octobre 2026 (MoArk POC validé sur la VM Debian 13)**
+
+- [x] Étudier l'OpenAPI officielle MoArk et les conditions d'accès ; distinguer Serverless, workflows et dépôts Git/LFS de modèles/datasets.
+- [x] Ajouter un adaptateur `SourceRecord` de type `inference_endpoint`, sans fusion interplateforme ni preuve de poids déduite du catalogue.
+- [x] Valider 91/91 tests Python localement et sur la VM, dont 15 tests MoArk sur fixture synthétique et client HTTP simulé.
+- [x] Sonder réellement `Qwen3-8B` par un GET public anonyme ; conserver timestamp, provenance et inconnues, sans inférence.
+- [x] Valider le snapshot B2 réel et ses imports PostgreSQL/SurrealDB ; voir [MOARK_B3.md](database/poc/MOARK_B3.md).
+- [x] Importer puis réimporter sur la VM : 14 ressources par moteur, réimportation idempotente confirmée et 405 modèles historiques PostgreSQL préservés (résultats VM communiqués par l'utilisateur).
+- [ ] Synchroniser les fichiers locaux non suivis de la VM avec la branche publiée, après comparaison ; voir [la procédure ciblée](database/poc/MOARK_VM_SYNC.md).
+- [ ] Étudier séparément capacités, quotas applicables et dépôts de poids MoArk/Gitee ; aucune association automatique par nom.
+
+Le connecteur est opérationnel pour les métadonnées publiques en lecture seule.
+L'accès réel à l'inférence n'a pas été testé. Le Discovery Service automatisé
+reste à développer ; ces validations portent sur des sondes et imports manuels.
+
 ---
 
 # Phase 2 — Choix et POC de la base de données
@@ -324,9 +339,9 @@ Objectif : exploiter les catalogues existants au lieu de reconstruire leur trava
 
 ## Hubs complémentaires à étudier — ModelScope, OpenCSG/CSGHub, MoArk
 
-- [ ] **ModelScope (Alibaba)** : sonder l'API officielle sur quelques modèles ciblés et définir un adaptateur `model_artifact` distinct de Hugging Face (identité, révision, fichiers, licence, restrictions d'accès). Séparer modèles, datasets, Studios et agents.
-- [ ] **OpenCSG / CSGHub** : vérifier les API publiques, les versions et la compatibilité Hugging Face annoncée ; adapter modèles et ressources d'agents sans fusionner automatiquement les identifiants de plateformes différentes.
-- [ ] **MoArk (OSChina)** : qualifier son catalogue et ses conditions d'accès ; représenter par défaut les offres de modèles servis comme `inference_endpoint`, et ne déclarer `model_artifact` que lorsqu'un dépôt de poids et sa provenance sont vérifiés.
+- [x] **ModelScope (Alibaba), POC B3.1** : adaptateur de métadonnées `model_artifact` et import manuel validés sur un dépôt ciblé, distinct de Hugging Face. L'extension à d'autres modèles, fichiers, datasets, Studios et agents reste à étudier.
+- [x] **OpenCSG / CSGHub, POC modèles B3.2** : API officielle, adaptateur `model_artifact` et import manuel validés sur un dépôt ciblé, sans fusion interplateforme. Les ressources d'agents, datasets, spaces, MCP, skills et l'AI Gateway restent à étudier.
+- [x] **MoArk (OSChina), POC B3.3** : catalogue public qualifié, adaptateur `inference_endpoint` et import manuel validés. L'inférence n'a pas été testée ; les dépôts de poids nécessitent un contrat séparé et une provenance vérifiée.
 - [ ] Tester chaque connecteur sur des fixtures, avec conservation de la provenance, des valeurs inconnues et des limites de quotas ; aucune aspiration globale ni jeton stocké dans Git.
 
 ## Catalogue distinct de ressources d'agents (Awesome AI Agents)
