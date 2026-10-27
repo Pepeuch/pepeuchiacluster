@@ -216,6 +216,17 @@ reste à développer ; ces validations portent sur des sondes et imports manuels
 - [x] Valider 167 tests sur fixtures uniquement ; sept snapshots et agrégat identiques aux références B3.3, CLI historiques préservées et aucune collecte réelle.
 - [ ] Examiner le registre manuel avant toute extension online ; provenance synthétique/réelle, domaines/comptes, NIM multitag et résultats partiels restent à décider.
 
+**Checkpoint B4.4 — 27 octobre 2026 (budgets et reprises validés hors ligne)**
+
+- [x] Ajouter les politiques explicites par source/ressources : requêtes, tentatives, temps monotone total, plafond de délai et idempotence ; aucune valeur présentée comme quota fournisseur.
+- [x] Classer les erreurs sans contenu sensible ; préserver NIM 404, interdire les retries 401/403/404/304 et erreurs de contrat ; aucune suppression.
+- [x] Ajouter backoff exponentiel saturant, jitter et horloges injectés, Retry-After secondes/dates HTTP validés ; reporter sans attendre si budget/plafond insuffisant. Transport toujours à une tentative.
+- [x] Produire des résultats indépendants et manifestes hors payload B2 ; aucun snapshot après échec, dépassement ou sélection incomplète. Aucune CLI réelle activée.
+- [x] Préparer la protection synthétique optionnelle `--protected-output`, refusée avant SQL par les importeurs B2 existants, sans changer le mode brut historique ; voir [EXECUTION_B44.md](database/poc/EXECUTION_B44.md).
+- [x] Valider 229 tests, dont les 167 précédents inchangés ; snapshots des sept sources et empreintes B3.3 conservés, aucune attente/réseau/base réels dans les tests.
+- [ ] Décider la provenance obligatoire et le contrat d'import avant toute protection complète du B2 brut ; l'option ne remplace pas une validation d'origine.
+- [ ] B4.5 : concevoir cache exact-scope avant 304/unchanged, checkpoints atomiques/rétention/reprise après arrêt, sélections paginées et garanties SDK ; concurrence par hôte et budget global restent ultérieurs.
+
 ---
 
 # Phase 2 — Choix et POC de la base de données

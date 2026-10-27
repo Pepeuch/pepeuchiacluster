@@ -11,6 +11,7 @@ from urllib.parse import parse_qsl, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from metadata_primitives import assert_secret_free, copy_metadata, strict_json_loads
+from retry_after import RetryAfter, parse_retry_after
 
 
 class MetadataResponseError(ValueError):
@@ -28,8 +29,11 @@ class MetadataTimeoutError(TimeoutError):
 class MetadataHTTPError(HTTPError):
     """HTTPError-compatible status, without response body, headers or URL."""
 
-    def __init__(self, status: int):
+    def __init__(self, status: int, *, retry_after: RetryAfter | None = None):
+        if retry_after is not None and not isinstance(retry_after, RetryAfter):
+            raise ValueError("Invalid normalized Retry-After")
         super().__init__("", status, "Metadata HTTP request failed", {}, None)
+        self.retry_after = retry_after
 
 
 @dataclass(frozen=True)
@@ -58,6 +62,7 @@ class HTTPPolicy:
 class HTTPResult:
     status: int
     body: bytes
+    retry_after: RetryAfter | None = None
 
 
 class MetadataTransport(Protocol):
@@ -81,11 +86,12 @@ class UrllibTransport:
         opener = self.opener if self.opener is not None else build_opener(NoRedirect())
         with opener.open(request, timeout=timeout) as response:
             status = getattr(response, "status", 200)
+            headers = getattr(response, "headers", None)
+            retry_after = parse_retry_after(headers.get("Retry-After")) if headers is not None and status != 200 else None
             # urllib normally raises HTTPError first, but explicit status checks
             # also protect injected openers. Do not read error/redirect bodies.
             body = b""
             if status == 200:
-                headers = getattr(response, "headers", None)
                 length = headers.get("Content-Length") if headers is not None else None
                 expected = None
                 if length is not None:
@@ -104,7 +110,7 @@ class UrllibTransport:
                     raise MetadataNetworkError("Metadata response interrupted")
                 if expected is not None and len(body) > expected:
                     raise MetadataResponseError("Metadata response length mismatch")
-        return HTTPResult(status, body)
+        return HTTPResult(status, body, retry_after)
 
 
 def _validate_url(url: str, policy: HTTPPolicy) -> None:
@@ -140,6 +146,8 @@ def get_metadata_json(url: str, *, policy: HTTPPolicy, transport: MetadataTransp
         )
     except HTTPError as exc:
         status = exc.code
+        retry_after = (exc.retry_after if isinstance(exc, MetadataHTTPError) else
+                       parse_retry_after(exc.headers.get("Retry-After")) if exc.headers is not None else None)
         # Release any HTTP error stream without reading or retaining its body.
         try:
             exc.close()
@@ -147,7 +155,7 @@ def get_metadata_json(url: str, *, policy: HTTPPolicy, transport: MetadataTransp
             pass
         if type(status) is not int or not 100 <= status <= 599:
             raise MetadataNetworkError("Invalid metadata HTTP status") from None
-        raise MetadataHTTPError(status) from None
+        raise MetadataHTTPError(status, retry_after=retry_after) from None
     except IncompleteRead:
         # Never decode a partial body, even when its prefix is valid JSON.
         raise MetadataNetworkError("Metadata response interrupted") from None
@@ -161,8 +169,10 @@ def get_metadata_json(url: str, *, policy: HTTPPolicy, transport: MetadataTransp
         raise MetadataNetworkError("Metadata network unavailable") from None
     if not isinstance(result, HTTPResult) or type(result.status) is not int or not 100 <= result.status <= 599:
         raise MetadataResponseError("Invalid metadata HTTP result")
+    if result.retry_after is not None and not isinstance(result.retry_after, RetryAfter):
+        raise MetadataResponseError("Invalid normalized Retry-After")
     if result.status != 200:
-        raise MetadataHTTPError(result.status)
+        raise MetadataHTTPError(result.status, retry_after=result.retry_after)
     if not isinstance(result.body, bytes):
         raise MetadataResponseError("Metadata response must be bytes")
     if len(result.body) > policy.max_response_bytes:

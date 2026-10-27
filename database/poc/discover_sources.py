@@ -20,10 +20,11 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--source", action="append", choices=tuple(FIXTURE_BINDINGS), help="Repeat to select sources; default: all seven")
     parser.add_argument("--captured-at", help="Override the fixture manifest's fixed observation timestamp")
+    parser.add_argument("--protected-output", action="store_true", help="Wrap synthetic output so existing B2 import generators reject it")
     args = parser.parse_args()
     if args.list_sources:
-        if args.source is not None or args.captured_at is not None:
-            parser.error("--source and --captured-at require --fixtures")
+        if args.source is not None or args.captured_at is not None or args.protected_output:
+            parser.error("--source, --captured-at and --protected-output require --fixtures")
         print(json.dumps([{
             "source": name, "entity_types": sorted(binding.spec.entity_types),
             "selection_modes": sorted(binding.spec.selection_modes),
@@ -31,11 +32,15 @@ def main() -> int:
         return 0
     try:
         snapshot = discover_fixtures(args.manifest, sources=args.source, captured_at=args.captured_at)
+        output = snapshot
+        if args.protected_output:
+            from synthetic_output import protect_fixture_snapshot
+            output = protect_fixture_snapshot(snapshot)
     except (OSError, ValueError, TypeError, KeyError) as exc:
         print(error_summary("Fixture discovery", exc), file=sys.stderr)
         return 1
     print(f"Prepared {len(snapshot['records'])} SYNTHETIC fixture records; do not import as real observations", file=sys.stderr)
-    print(json.dumps(snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False))
+    print(json.dumps(output, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False))
     return 0
 
 

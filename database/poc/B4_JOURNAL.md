@@ -135,9 +135,67 @@ Aucune modification préexistante sans rapport n'a été déplacée ou effacée.
 - Aucune collecte réelle, inférence, poids, GPU, requête payante, base, migration
   ou planification. Modifications laissées pour revue, sans commit ni push de ce lot.
 
+## B4.4 — budgets, erreurs et reprises (27 octobre 2026)
+
+- Référence : `bd888c4` publié, arbre propre sur `feat/discovery-b4-consolidation` ;
+  **167 tests initiaux réussis**. Aucune modification préexistante à déplacer.
+- Ajouts : `execution_models.py`, `discovery_execution.py`, `retry_after.py`,
+  `synthetic_output.py`, trois modules de tests et `EXECUTION_B44.md`.
+- Politiques sans quotas implicites : ressources explicites, limites de dispatches
+  et tentatives distinctes, temps monotone, backoff/plafond, codes temporaires et
+  choix de retries transport. Horloge UTC, attente et jitter toujours injectés.
+- Les reprises sont séparées du transport. `MetadataHTTPError`/`HTTPResult`
+  transmettent seulement un Retry-After normalisé optionnel ; headers d'erreur
+  toujours vides, aucun corps ou URL réexposé. Les appels anciens restent valides.
+- Classification par type/code, sans inspection des messages : refus permanents,
+  NIM 404 par tag, 304 sans cache, JSON/contrat/identité, connexion/timeout et budgets.
+  Les erreurs permanentes et opérations non idempotentes ne sont pas réessayées.
+- Respect des minima Retry-After, report plutôt que réduction des délais ; dates
+  IMF/RFC850/asctime et règle de siècle contrôlées avec les horloges simulées.
+  La référence documentaire consultée est RFC 9110 ; aucun endpoint fournisseur.
+- Résultats success/unchanged/deferred/failed et rapports versionnés hors B2.
+  Le moteur n'émet pas unchanged sans cache ; aucun snapshot après erreur,
+  dépassement ou sélection incomplète. Chaque source conserve son scope demandé,
+  ses compteurs et sa provenance déclarée ; les succès indépendants restent intacts.
+- La revue a ajouté des contrôles du coût de construction/validation avant
+  publication, des attentes interrompues/trop longues et de la copie de tous les
+  plans avant le premier callback. Timeout socket et deadline globale restent
+  distincts ; aucune préemption de code bloquant ou compteur interne SDK promis.
+- Protection préparée : `discover_sources.py --fixtures --protected-output` ;
+  enveloppe synthétique à format distinct, snapshot intérieur intact et rejet
+  testé par les deux générateurs avant toute instruction SQL. Aucun changement
+  obligatoire des importeurs ou de la sortie brute compatible B4.3.
+- Limite explicitée : le B2 brut historique reste importable et son origine ne
+  peut pas être prouvée par son hash ; contrat de provenance obligatoire, nouveau
+  défaut d'enveloppe ou chemin legacy à examiner avant une évolution incompatible.
+- Validation : **229 tests**, dont les 167 existants inchangés et 62 nouveaux
+  (48 exécution, 8 Retry-After/transport, 6 protection). Réseau, attente système et
+  clients réels interdits/simulés dans les nouveaux tests. Références B3.3 intactes,
+  CLI fixtures et historiques préservées, `git diff --check` propre.
+- Aucune persistance de checkpoints, collecte réelle, base, poids, GPU, inférence,
+  admission au catalogue personnel, migration ou scheduler. Le rapport initial
+  conservait ce lot non commité pour revue avant publication.
+
+## Clôture B4.4 — revue avant publication (27 octobre 2026)
+
+- Les modifications locales sont exclusivement celles de B4.4 ; aucun travail
+  sans rapport n'est indexé. Budgets, compteurs, idempotence, Retry-After, deadline
+  coopérative, lectures interrompues et résultats indépendants ont été relus.
+- Les tests vérifient notamment l'absence de dispatch supplémentaire, de sommeil
+  réel, de snapshot tardif/partiel et de contenu d'exception dans les manifestes.
+  Les générateurs historiques refusent l'enveloppe synthétique avant toute sortie.
+- Suite complète : **229 tests réussis** ; `git diff --check` propre et référence
+  B3.3 intacte. Aucun défaut démontré justifiant un élargissement du lot.
+- Références distantes récupérées : HEAD et origin/feat/discovery-b4-consolidation
+  identiques avant le commit, aucune divergence. Publication prévue du seul commit
+  B4.4, sans force ; ne pas considérer cette intention comme une confirmation de push.
+
 ## Travaux suivants
 
 Revoir le registre manuel sur fixtures avant toute extension online. Décisions
 de provenance synthétique/réelle, domaines/comptes, NIM multitag et succès partiels
-toujours ouvertes ; aucun checkpoint, retry ou traitement périodique ajouté.
+toujours ouvertes. Les retries B4.4 existent uniquement dans l'API d'exécution
+injectée ; aucun retry implicite n'a été ajouté aux CLI historiques ou au client HTTP.
+B4.5 : cache lié au scope exact, checkpoints atomiques, rétention/reprise après
+arrêt, sélection dynamique et garanties des SDK avant budgets de requêtes physiques.
 Pas de scheduler ni modification du Personal Model Catalog.

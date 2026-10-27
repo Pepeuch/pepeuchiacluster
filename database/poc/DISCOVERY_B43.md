@@ -27,7 +27,7 @@ python3 database/poc/discover_sources.py --fixtures \
 Sans `--fixtures` ou `--list-sources`, la commande échoue à l'analyse des arguments.
 `--online` n'existe pas. La commande ne produit ni SQL ni SurrealQL et ne relie
 aucun appel de collecte réelle. La mention **SYNTHETIC, do not import** est envoyée
-sur stderr ; stdout reste un snapshot B2 compatible, sans ajout de champ susceptible
+sur stderr ; stdout reste par défaut un snapshot B2 compatible, sans ajout de champ susceptible
 de changer les empreintes historiques.
 
 Ces données sont des exemples de test, **pas de nouvelles observations fournisseur**.
@@ -120,3 +120,9 @@ n'a été effectué.
 Le registre online, les garanties de redirection B1, le contrôle réseau du SDK,
 les budgets/retries, checkpoints et résultats partiels ne sont pas ajoutés ici.
 Le Personal Model Catalog et les schémas PostgreSQL/SurrealDB restent inchangés.
+
+Depuis B4.4, les primitives de budget/reprise existent dans une couche Python
+séparée, sans activation online de cette CLI. `--protected-output` offre une
+enveloppe synthétique optionnelle refusée par les générateurs d'import existants.
+Voir [EXECUTION_B44.md](EXECUTION_B44.md) pour les garanties et limites ; la sortie
+B2 brute par défaut et ses empreintes restent inchangées.

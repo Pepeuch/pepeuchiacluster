@@ -105,3 +105,8 @@ Complément B4.3 : la lecture interrompue est testée pendant `response.read()`.
 `IncompleteRead` est normalisé en erreur réseau sûre ; timeout et connexion coupée
 conservent leur classement. Le stream est fermé sans décodage du corps partiel,
 sans retry. Voir [DISCOVERY_B43.md](DISCOVERY_B43.md).
+
+B4.4 ajoute seulement un carrier Retry-After validé et non sensible aux erreurs :
+le client conserve son GET unique et ses headers d'erreur vides. Les reprises
+sont exclusivement dans `discovery_execution.py`, sans appel implicite depuis
+les CLI historiques ; voir [EXECUTION_B44.md](EXECUTION_B44.md).
