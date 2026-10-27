@@ -6,6 +6,7 @@ from control_plane.capabilities import CPU_DIGEST
 from control_plane.contracts import ExecutionResult, Problem, fields, operation_id, sha256
 from control_plane.worker_client import validate_request
 from . import private_io
+from .contracts import configuration as validate_configuration
 
 
 JOURNAL_SCHEMA = "pepeuch.worker/run/v1"
@@ -13,7 +14,7 @@ JOURNAL_SCHEMA = "pepeuch.worker/run/v1"
 
 class IndependentRunner:
     def __init__(self, root, configuration, credential, client, executor):
-        self.root, self.config = root, configuration
+        self.root, self.config = root, validate_configuration(configuration)
         self.client, self.executor = client, executor
         self.fingerprint = sha256(credential.encode("ascii"))
 

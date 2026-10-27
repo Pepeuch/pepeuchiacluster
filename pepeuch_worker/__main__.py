@@ -34,8 +34,7 @@ def main():
             data = configuration(decode_json(raw))
             root = private_io.absolute(args.worker_dir)
             # Existing roots are never repurposed or repaired silently.
-            root.mkdir(mode=0o700)
-            private_io.directory(root)
+            private_io.initialize_directory(root)
             private_io.create(root / "worker.json", canonical(data).encode())
             print("Configuration CPU créée ; credential à fournir séparément. OS : NOT VERIFIED.")
             return 0

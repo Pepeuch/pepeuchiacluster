@@ -67,6 +67,9 @@ class SecurityProperty:
 
 
 def require_verified(properties):
-    """Declared settings and untrusted booleans can never grant readiness."""
-    if not properties or any(not isinstance(p, SecurityProperty) or not p.verified or p.enforced is not True for p in properties.values()):
-        raise Problem("os_isolation_not_verified", 503)
+    """Legacy display properties are never an authorization to launch.
+
+    Even a complete dictionary of true fields has no authenticated observer or
+    launch binding. Strict authorization belongs to the independent verifier.
+    """
+    raise Problem("os_isolation_not_verified", 503)
