@@ -13,7 +13,7 @@ import test_http_integration as b51
 from control_plane.auth import ADMIN
 from control_plane.contracts import Problem
 from control_plane.http_io import DeadlineInput, ResponseInput
-from control_plane.worker_client import LocalClient
+from control_plane.worker_client import LocalClient, WorkerRunner
 
 
 class Boundaries(unittest.TestCase):
@@ -166,3 +166,50 @@ class ReaderContracts(unittest.TestCase):
                 connection.return_value.getresponse.return_value = response
                 with self.assertRaises(Problem):
                     LocalClient("http://127.0.0.1:8765", "synthetic-value").call("POST", "/api/v1/execution/claim", {})
+
+
+class WorkerReplyContracts(unittest.TestCase):
+    def request(self):
+        from control_plane.contracts import new_id
+        mission = new_id("m")
+        return {"schema": "pepeuch.control-plane/execution-request/v1", "attempt_id": new_id("a"), "generation": new_id("g"),
+                "mission": {"id": mission, "title": "test", "objective": "test"},
+                "task": {"schema": "pepeuch.control-plane/task/v1", "id": new_id("t"), "mission_id": mission,
+                         "role": "demo-report", "capability": "demo.report.v1", "worker_id": "fake-cpu", "state": "running", "simulated": True},
+                "authorized_files": [], "started_at": "2026-10-27T00:00:00+00:00", "deadline": 2000, "expected_version": None}
+
+    def test_invalid_claim_envelope_cannot_execute(self):
+        from unittest.mock import Mock
+        client, executor = Mock(), Mock()
+        client.call.return_value = {"unexpected": "redacted-private-value"}
+        with self.assertRaises(Problem):
+            WorkerRunner(client, executor).run_once()
+        executor.execute.assert_not_called()
+
+    def test_wrong_identity_or_capability_cannot_execute(self):
+        from unittest.mock import Mock
+        for mutate in (lambda r: r["task"].update(capability="shell"), lambda r: r["task"].update(mission_id="other")):
+            request = self.request()
+            mutate(request)
+            client, executor = Mock(), Mock()
+            client.call.return_value = {"request": request}
+            with self.assertRaises(Problem):
+                WorkerRunner(client, executor).run_once()
+            executor.execute.assert_not_called()
+
+    def test_untrusted_state_is_not_returned_for_diagnostics(self):
+        from unittest.mock import Mock
+        client, executor = Mock(), Mock()
+        client.call.side_effect = [{"request": self.request()}, {"schema": "pepeuch.control-plane/attempt-state/v1", "state": "redacted-private-value", "deadline": 2000}]
+        with self.assertRaises(Problem) as error:
+            WorkerRunner(client, executor).run_once()
+        self.assertNotIn("redacted-private-value", str(error.exception))
+        executor.execute.assert_not_called()
+
+    def test_mismatched_acknowledgement_is_not_reported_as_success(self):
+        from unittest.mock import Mock
+        client = Mock()
+        client.call.side_effect = [{"request": self.request()}, {"schema": "pepeuch.control-plane/attempt-state/v1", "state": "running", "deadline": 2000},
+                                   {"accepted": True, "duplicate": False, "mission_id": "wrong-mission"}]
+        with self.assertRaises(Problem):
+            WorkerRunner(client).run_once()

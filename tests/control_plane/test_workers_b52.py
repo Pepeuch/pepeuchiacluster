@@ -201,6 +201,32 @@ class Workers(unittest.TestCase):
 
 
 class MigrationCompatibility(unittest.TestCase):
+    def test_unsupported_sqlite_refused_before_creating_any_data(self):
+        with tempfile.TemporaryDirectory(prefix="pepeuch-b52-sqlite-version-") as temporary:
+            destination = Path(temporary) / "new-data"
+            with patch("control_plane.storage.sqlite3.sqlite_version_info", (3, 30, 1)):
+                with self.assertRaises(Problem):
+                    Store(destination)
+            self.assertFalse(destination.exists())
+
+    def test_restoring_pre_registry_backup_never_reactivates_legacy_worker(self):
+        with tempfile.TemporaryDirectory(prefix="pepeuch-b52-v1-restore-") as temporary:
+            root = Path(temporary)
+            migration = Path(__file__).resolve().parents[2] / "control_plane/migrations/0001.sql"
+            with patch("control_plane.storage.Path.glob", return_value=[migration]):
+                source = Store(root / "source")
+            source.close()
+            create_backup(root / "source", root / "backup")
+            restore_backup(root / "backup", root / "restored")
+            app = ControlPlane(root / "restored", clock=lambda: 2000)
+            try:
+                self.assertEqual(app.registry.list()[0]["status"], "revoked")
+                new_unregistered_key = (root / "restored/secrets/worker.token").read_text().strip()
+                with self.assertRaises(Problem):
+                    Authenticator(root / "restored").authenticate("Bearer " + new_unregistered_key)
+            finally:
+                app.close()
+
     def test_b51_index_and_cached_worker_operation_upgrade_without_identity_changes(self):
         with tempfile.TemporaryDirectory(prefix="pepeuch-b52-v1-") as temporary:
             root = Path(temporary)

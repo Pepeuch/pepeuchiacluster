@@ -11,9 +11,10 @@ from pathlib import Path
 import re
 import secrets
 import sqlite3
+import time
 
 from .contracts import Problem, canonical, decode_json, fields, identifier, sha256
-from .storage import Settings, private_directory, read_private, write_new
+from .storage import Settings, migrate_index, private_directory, read_private, write_new
 from .workspace import file_name
 
 
@@ -29,6 +30,8 @@ def migrations():
 
 def verify_index(con):
     """Reject unknown/modified schemas, FK failures and invalid file references."""
+    if sqlite3.sqlite_version_info < (3, 31, 0):
+        raise Problem("sqlite_security_features_required")
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA trusted_schema=OFF")
     if [r[0] for r in con.execute("PRAGMA integrity_check")] != ["ok"] or con.execute("PRAGMA foreign_key_check").fetchone():
@@ -225,12 +228,25 @@ def restore_backup(backup, destination):
             write_new(destination / entry["path"], raw)
     with readonly_index(destination / "app/index.sqlite3") as con:
         verify_index(con)
-    # Registry introduced by B5.2c: never reactivate identities copied in a backup.
-    with sqlite3.connect(destination / "app/index.sqlite3") as con:
-        if con.execute("SELECT 1 FROM sqlite_master WHERE name='worker_identities'").fetchone():
-            con.execute("UPDATE worker_identities SET status='revoked',credential_epoch=credential_epoch+1")
     for role in ("admin", "worker"):
         write_new(destination / "secrets" / (role + ".token"), secrets.token_urlsafe(32).encode() + b"\n")
+    # Upgrade old backups BEFORE retiring identities, including the legacy worker
+    # seeded by migration 2. No transient activation after installation acceptance.
+    settings = Settings(**decode_json(read_private(destination / "config/settings.json", 1024)))
+    con = sqlite3.connect(destination / "app/index.sqlite3", isolation_level=None)
+    try:
+        con.execute("PRAGMA foreign_keys=ON")
+        con.execute("PRAGMA synchronous=FULL")
+        con.execute("BEGIN IMMEDIATE")
+        migrate_index(con, destination, settings, time.time)
+        con.execute("UPDATE worker_identities SET status='revoked',credential_epoch=credential_epoch+1")
+        verify_index(con)
+        con.commit()
+    except BaseException:
+        con.rollback()
+        raise
+    finally:
+        con.close()
     write_new(destination / "app/backend.lock", b"")
     for part in ("app", "objects", "staging", "logs", "config", "secrets"):
         sync_directory(destination / part)

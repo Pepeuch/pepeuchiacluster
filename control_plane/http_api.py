@@ -9,7 +9,6 @@ from http.client import HTTPMessage
 from pathlib import Path
 import re
 import threading
-import time
 from urllib.parse import urlsplit
 
 from .auth import Authenticator, require_role

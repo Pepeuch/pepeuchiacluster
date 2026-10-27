@@ -108,3 +108,131 @@ TESTÉ : 116 tests cumulés (+15), couvrant refus d'anciennes clés/principaux,
 révocation en cours, cache d'opération, accès entre deux workers enrôlés, rotation
 CLI refusée sur backend actif, politique de sortie/deadline, migration B5.1 et
 registre restauré révoqué après redémarrage. Les 341 tests initiaux sont conservés.
+
+## B5.2d — validation finale et utilisation
+
+TESTÉ : **123 tests Control Plane + 272 tests Discovery Cache = 395 tests Python**.
+Les 341 tests d'origine et le scénario Firefox B5.1 sont conservés sans modification.
+Le scénario navigateur couvre brouillon/approbation, HTML inerte, worker séparé,
+download réel, versions autorisées, deux uploads, backend et worker redémarrés,
+même SHA256, largeur mobile et verrouillage. Runtime réel : Python 3.12.3,
+SQLite 3.45.1, Firefox 158.0.1 / geckodriver 0.37.1, rendu logiciel. Aucun GPU.
+
+Revue finale : validation des réponses métier worker (enveloppes, IDs, capacité,
+état, deadline et acquittement correspondant à la mission). Une chaîne d'état
+inattendue n'est ni retournée au CLI ni affichée comme un diagnostic de confiance.
+Quatre tests négatifs supplémentaires et un test des CLI backup/restore/réenrôlement
+ont été ajoutés au lot final. `git diff --check` et syntaxe JavaScript vérifiés.
+
+Un test de compatibilité supplémentaire couvre les sauvegardes antérieures au
+registre : leurs migrations sont appliquées dans la destination, puis toutes
+les identités révoquées **avant** le marqueur d'acceptation. Le worker legacy ne
+peut pas être activé par une migration différée au premier démarrage. Le code
+de migration est partagé avec Store ; aucun test historique n'a été ajusté.
+
+Prérequis SQLite relevé à **3.31.0** pour disposer de `trusted_schema=OFF`
+([introduction officielle](https://www.sqlite.org/releaselog/3_31_0.html)) : refus
+avant création de données si le runtime est plus ancien, cas testé. Aucune
+installation/mise à niveau automatique ; le runtime testé est déjà en 3.45.1.
+
+Les références B3.3 restent inchangées. Aucun fichier historique du Discovery
+Cache, test B5.1, document B5.0 ou fichier d'infrastructure modifié. La migration
+SQLite concerne **uniquement l'index applicatif du Control Plane**. Aucun POC ou
+catalogue personnel touché.
+
+La [procédure Debian 13 / Python 3.13](B52_DEBIAN13_VALIDATION.md) est préparée :
+**non exécutée**, aucune action sur la VM existante. Elle utilise un checkout et
+des données temporaires indépendants, sans installation automatique.
+
+### Sauvegarder et restaurer
+
+Arrêter backend et worker, choisir des destinations **inexistantes**, privées,
+hors du code et hors de la source. Exemple dans un répertoire de test contrôlé :
+
+```bash
+python3 -m control_plane backup --data-dir "$PEPEUCH_B52_CHECK_DIR/source" --destination "$PEPEUCH_B52_CHECK_DIR/backup"
+python3 -m control_plane restore --backup-dir "$PEPEUCH_B52_CHECK_DIR/backup" --data-dir "$PEPEUCH_B52_CHECK_DIR/restored"
+```
+
+La sauvegarde peut être copiée hors machine via un canal/stockage privé protégé
+par l'opérateur. Aucun transport externe ni chiffrement d'archive n'est fourni.
+Elle contient des données applicatives potentiellement privées, **aucun credential
+de connexion réutilisable**. Une sauvegarde altérée dont l'attaquant réécrit aussi
+les hashes n'est pas authentifiée cryptographiquement : la provenance du support
+doit rester de confiance.
+
+Après restauration : nouvelle clé admin, mêmes missions/fichiers et identités
+worker conservées mais révoquées, epochs augmentés. L'ancien `worker.token` de
+la source est refusé ; celui nouvellement généré n'active pas les workers restaurés.
+Ne pas démarrer deux copies comme s'il s'agissait d'un cluster distribué : aucun
+protocole de consensus ou d'appairage interserveurs n'est implémenté.
+
+### Enrôler, révoquer et renouveler
+
+Backend arrêté, l'enrôlement crée un ID opaque et imprime **uniquement** un
+descripteur public et le nom relatif du nouveau fichier privé :
+
+```bash
+python3 -m control_plane worker-enroll --data-dir "$PEPEUCH_B52_CHECK_DIR/restored" --capability demo.report.v1 --lease-seconds 30 --max-output-bytes 32768
+python3 -m control_plane worker-rotate --data-dir "$PEPEUCH_B52_CHECK_DIR/restored" --worker-id fake-cpu --reactivate
+```
+
+`--reactivate` est obligatoire si l'identité est révoquée. Sans ce flag, une simple
+rotation ne la réactive pas. L'enrôlement ne transfère aucune permission OS ; seul
+le propriétaire local du répertoire réalise cette maintenance.
+
+Après redémarrage du backend, lancer le worker avec **le fichier retourné** par
+la commande précédente (chemin absolu sous `secrets/`) :
+
+```bash
+python3 -m control_plane worker --data-dir "$PEPEUCH_B52_CHECK_DIR/restored" --credential-file "$PEPEUCH_B52_CHECK_DIR/restored/secrets/workers/fake-cpu.3.token" --once
+```
+
+L'epoch `.3` est un exemple ; reprendre le nom effectivement retourné, sans le
+deviner. Aucun contenu de credential n'est passé dans la ligne de commande.
+Le fichier legacy `secrets/worker.token` reste valable pour une installation
+B5.1 migrée non révoquée/non renouvelée ; il n'est jamais accepté comme repli
+après une rotation. Il n'est pas supprimé automatiquement.
+
+La révocation en ligne utilise l'API admin `POST /api/v1/workers/{id}/revoke`
+et un UUID `operation_id`. Elle est idempotente ; aucune API d'émission de secret
+n'est exposée. Une requête déjà authentifiée est contrôlée de nouveau en transaction.
+Les tâches en file sur cette identité ne sont pas réaffectées automatiquement.
+
+### Relancer les contrôles
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests/control_plane -p 'test_*.py' -v
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s database/poc -p 'test_*.py' -q
+node --check control_plane/web/app.js  # facultatif, Node déjà présent
+git diff --check
+```
+
+Les tests HTTP nécessitent des sockets loopback ; les deadlines sont testées par
+horloge injectée, avec un test de timeout HTTP synchronisé par socket, sans sleep
+artificiel. Tests de résilience dans des temporaires privés, pas sous `/opt`.
+
+### Limites restantes et suites
+
+- `http.server` et ce sous-ensemble strict ne sont pas une validation production.
+  HTTP/1 local seulement, sans TLS/LAN, cookies, proxy, auto-découverte ou débit garanti.
+- Processus sous le même UID ; fichiers backend et clés restent accessibles au
+  propriétaire local. Isolation OS/cgroups/conteneur étudiée mais **non appliquée**.
+- Révocation bloquant le contrôle du cluster, pas arrêt forcé d'un processus hostile.
+  CPU/RAM/PID physiques non limités ; aucune exécution arbitraire autorisée.
+- Credentials admin lus au démarrage, pas de comptes multiples, PKI ou rotation admin
+  en ligne. Registre local de workers simulés, pas enrôlement LAN/mTLS.
+- Rétention sans purge ; copies interrompues et clés non référencées à examiner
+  manuellement. Aucun garbage collector, sauvegarde à chaud ou chiffrement embarqué.
+- Avant un worker réel : profil OS vérifié négativement, baux/réseau/outils
+  autorisés, processus enfants et politique de récupération définis ; nouvelle
+  autorisation requise avant installation ou essai matériel.
+
+### Inventaire du lot
+
+Créés : `control_plane/http_io.py`, `backup.py`, `worker_registry.py`,
+`control_plane/migrations/0002.sql` ; tests `test_http_b52.py`, `test_backup_b52.py`,
+`test_workers_b52.py` sous `tests/control_plane/` ; ce journal,
+`WORKER_ISOLATION_B52.md` et `B52_DEBIAN13_VALIDATION.md`.
+Actualisés : authentification, CLI, contrats internes, service/exécution,
+workspace, adaptateur HTTP/client worker, panneau worker WebUI, README et TODO.

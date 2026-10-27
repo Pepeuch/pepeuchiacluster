@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -203,3 +205,30 @@ class Backups(unittest.TestCase):
         self.assertEqual((self.source / "app/index.sqlite3").read_bytes(), before)
         self.assertEqual(self.backup.stat().st_mode & 0o077, 0)
         self.assertFalse((self.backup / "secrets").exists())
+
+    def test_cli_backup_restore_and_explicit_worker_reenrollment(self):
+        self.app.close()
+        for arguments in (("backup", "--data-dir", str(self.source), "--destination", str(self.backup)),
+                          ("restore", "--backup-dir", str(self.backup), "--data-dir", str(self.restored))):
+            result = subprocess.run([sys.executable, "-m", "control_plane", *arguments], capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0)
+            for role in ("admin", "worker"):
+                self.assertFalse((self.source / f"secrets/{role}.token").read_bytes().strip() in result.stdout + result.stderr, "Credential leaked")
+        restored = ControlPlane(self.restored, clock=lambda: 2000)
+        try:
+            self.assertEqual(restored.workspace.download(ADMIN, self.workspace, self.file_id, self.version)[0], self.bytes)
+            self.assertEqual(restored.registry.list()[0]["status"], "revoked")
+        finally:
+            restored.close()
+        rotated = subprocess.run([sys.executable, "-m", "control_plane", "worker-rotate", "--data-dir", str(self.restored), "--worker-id", "fake-cpu", "--reactivate"], capture_output=True, timeout=10)
+        self.assertEqual(rotated.returncode, 0)
+        metadata = json.loads(rotated.stdout)
+        key = (self.restored / metadata["credential_file"]).read_text().strip()
+        self.assertFalse(key.encode() in rotated.stdout + rotated.stderr, "Credential leaked")
+        restored = ControlPlane(self.restored, clock=lambda: 3000)
+        try:
+            principal = Authenticator(self.restored).authenticate("Bearer " + key)
+            self.assertGreater(principal.credential_epoch, 1)
+            self.assertEqual(restored.workspace.download(ADMIN, self.workspace, self.file_id, self.version)[0], self.bytes)
+        finally:
+            restored.close()
