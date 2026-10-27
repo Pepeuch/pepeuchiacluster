@@ -33,7 +33,8 @@ ProtectKernelLogs=yes
 ProtectClock=yes
 ProtectHostname=yes
 ProtectProc=invisible
-ProcSubset=pid
+# Read-only boot ID is required to bind evidence to this boot. Tunables stay protected.
+ProcSubset=all
 RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes

@@ -3,7 +3,8 @@
 import os
 from pathlib import Path
 
-from .contracts import EVIDENCE_SCHEMA, SecurityProperty, require_verified
+from .contracts import EVIDENCE_SCHEMA, SecurityProperty
+from .linux_observer import collect
 
 
 def inspect(configuration):
@@ -11,8 +12,8 @@ def inspect(configuration):
     separate = (os.getuid() == os.geteuid() == profile["expected_uid"] != 0
                 and os.getgid() == os.getegid() == profile["expected_gid"] != 0
                 and os.getuid() != profile["backend_uid"])
-    properties = {"process_identity": SecurityProperty(profile, separate, separate,
-                  "getuid/geteuid/getgid/getegid match expectations; backend UID and account exclusivity are not independently proved")}
+    properties = {"process_identity": SecurityProperty(profile, separate, False,
+                  "local observation only; no independent authority authenticated")}
     # UID difference is observable; account exclusivity still needs operator proof.
     for name, declared in {
         "account_exclusivity": "dedicated account, no backend supplementary groups",
@@ -36,10 +37,12 @@ def inspect(configuration):
         except OSError:
             observations[label] = "NOT AVAILABLE"
     return {"schema": EVIDENCE_SCHEMA, "profile": profile["schema"], "status": "NOT VERIFIED",
-            "properties": {name: prop.to_dict() for name, prop in properties.items()}, "observations": observations}
+            "properties": {name: prop.to_dict() for name, prop in properties.items()}, "observations": observations,
+            "linux_evidence": collect(configuration), "authority": "not_authenticated"}
 
 
-def require_isolation(configuration):
-    report = inspect(configuration)
-    properties = {name: SecurityProperty(**item) for name, item in report["properties"].items()}
-    require_verified(properties)
+def require_isolation(configuration, *, verifier_fd=None):
+    from .verification_channel import VerificationSession
+    session = VerificationSession(configuration, verifier_fd)
+    session.check()
+    return session

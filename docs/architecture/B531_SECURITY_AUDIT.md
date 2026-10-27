@@ -37,3 +37,33 @@ et les erreurs de nettoyage observées ; l'isolation OS reste une frontière dis
   deadlines applicatives et les epochs/générations serveur sont déjà testées.
 - Tout rapport stocké ou envoyé par le worker est une donnée non fiable tant qu'une
   autorité distincte ne l'a pas recueilli, lié à l'exécution et authentifié.
+
+## Lot 2 — diagnostic Linux et intégration stricte
+
+Le [contrat de vérification](ISOLATION_VERIFICATION_B531.md) décrit les schémas,
+bindings, contrôles et limites. Lectures bornées, cgroup v2 sans repli, PID/starttime/
+boot/namespaces/inode, groupes et privilèges, limites réellement lisibles et
+montages sont séparés des exigences. Les métadonnées d'unité sont obtenues seulement
+par un `systemctl show` fixe du contrôleur, pas par un shell worker.
+
+Le canal optionnel hérité vérifie le créateur et **l'auteur de chaque message**,
+les nonces, le contexte, les empreintes, la couverture des garanties et la lease.
+Les preuves sont recontrôlées avant attribution, calcul et publication/reprise.
+Un refus tardif préserve le résultat local durable sans le publier. Aucun module
+du worker n'importe une base ou lance un subprocess ; la commande fixe d'observation
+systemd appartient au vérificateur séparé, chargé seulement par l'opérateur.
+
+| Risque complémentaire | État précis et preuve |
+|---|---|
+| Prendre les credentials de création d'un socket hérité pour ceux de l'auteur actuel | Conception protégée par `SCM_CREDENTIALS` ; tests de message non root, credentials absents/changés/tronqués et IPC réelle non privilégiée. Aucun test de contrôleur root exécuté. |
+| Rejeu d'un reçu après redémarrage/changement de configuration/profil/cgroup | Validation de portée/fraîcheur testée ; un reçu valide structurellement ne devient jamais une autorité. |
+| Perte/changement de preuve après calcul | Guards testés avant claim/calcul/finish et reprise ; journal préservé, aucun finish envoyé après refus. |
+| Credentials/fds inattendus dans le framing | Framing sous taille/deadline et fermeture des FD inattendus testés. |
+| Options de montage pouvant contenir des données sensibles | Rapport limité aux flags connus, sans source de montage ni options libres ; test de suppression de valeur synthétique sensible. |
+| `ProcSubset=pid` masque le boot ID requis | Gabarit proposé corrigé en `all`, protections de tunables conservées ; effet OS encore NOT VERIFIED. |
+| Fichier root ou JSON « verified » pris pour une attestation | Aucune telle entrée d'autorisation ; diagnostic toujours NOT VERIFIED. Contrôleur livré limité au refus. |
+| Socket IPv4 hérité créé par un autre UID contournant un filtre `skuid` | Risque résiduel élevé si FD non maîtrisés : inventaire de FD et garantie indépendante obligatoires, pas de validation annoncée. |
+
+La validation du permis positif est testée seulement avec des fixtures de protocole.
+Le contrôleur livré n'en émet pas : l'autorité indépendante, la qualification OS et
+la promotion d'une preuve côté serveur restent hors activation dans cette mission.

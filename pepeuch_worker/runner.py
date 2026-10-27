@@ -13,10 +13,15 @@ JOURNAL_SCHEMA = "pepeuch.worker/run/v1"
 
 
 class IndependentRunner:
-    def __init__(self, root, configuration, credential, client, executor):
+    def __init__(self, root, configuration, credential, client, executor, *, isolation_guard=None):
         self.root, self.config = root, validate_configuration(configuration)
         self.client, self.executor = client, executor
         self.fingerprint = sha256(credential.encode("ascii"))
+        self.isolation_guard = isolation_guard
+
+    def _isolation(self):
+        if self.isolation_guard is not None:
+            self.isolation_guard()
 
     def _request(self, request):
         validate_request(request, capabilities=(CPU_DIGEST,))
@@ -34,6 +39,7 @@ class IndependentRunner:
 
     def run_once(self, *, recover=False):
         with private_io.locked(self.root):
+            self._isolation()
             journal = private_io.load(self.root)
             pending = journal is not None
             if pending:
@@ -82,6 +88,7 @@ class IndependentRunner:
             elif pending:
                 result = ExecutionResult(request["attempt_id"], request["generation"], "interrupted", [], "cpu_interrupted")
             else:
+                self._isolation()
                 try:
                     result = self.executor.execute(request)
                 except KeyboardInterrupt:
@@ -100,6 +107,7 @@ class IndependentRunner:
                 result = ExecutionResult(request["attempt_id"], request["generation"], "cancelled", [])
                 journal["result"] = result.to_dict()
                 private_io.save(self.root, journal)
+            self._isolation()
             acknowledgement = self.client.call("POST", "/api/v1/execution/" + request["attempt_id"] + "/finish", result.to_dict())
             fields(acknowledgement, ("accepted", "duplicate", "mission_id"))
             if (acknowledgement["accepted"] is not True or type(acknowledgement["duplicate"]) is not bool

@@ -27,6 +27,7 @@ def main():
             sub.add_argument("--credential-file", type=Path, help="Private file, otherwise worker-dir/credential")
             sub.add_argument("--application-test", action="store_true", help="Explicit functional test WITHOUT verified OS isolation")
             sub.add_argument("--recover", action="store_true", help="Recover pending claim/publication or interrupt; never recompute")
+            sub.add_argument("--verifier-fd", type=int, help="Already-connected inherited root verifier FD; no secret, no listener")
     args = parser.parse_args()
     try:
         if args.command == "init":
@@ -43,8 +44,9 @@ def main():
         if args.command == "inspect":
             print(canonical(inspect(data)))
             return 0
-        if not args.application_test:
-            require_isolation(data)  # Before credential access or any backend connection.
+        if args.application_test and args.verifier_fd is not None:
+            raise Problem("conflicting_verification_modes")
+        session = None if args.application_test else require_isolation(data, verifier_fd=args.verifier_fd)
         credential = private_io.credential(root / "credential" if args.credential_file is None else args.credential_file)
         stop = threading.Event()
         def interrupt(_number, _frame):
@@ -52,7 +54,8 @@ def main():
         signal.signal(signal.SIGTERM, interrupt)
         signal.signal(signal.SIGINT, interrupt)
         runner = IndependentRunner(root, data, credential, LocalClient(data["backend_url"], credential),
-                                   CPUTextDigest(data["limits"], stop=stop))
+                                   CPUTextDigest(data["limits"], stop=stop),
+                                   isolation_guard=None if session is None else session.check)
         outcome = runner.run_once(recover=args.recover)
         print("Worker CPU : " + outcome + "; aucune inférence ; OS : NOT VERIFIED.")
         return 0

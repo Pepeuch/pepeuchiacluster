@@ -1,0 +1,9 @@
+# Proposed disposable-VM drop-in ONLY; not installed. Controller always denies.
+# Debian 13 systemd OpenFile connects as PID1, before worker AF restrictions.
+# No extra AF_UNIX permission for the worker and no secret in descriptor number.
+[Service]
+OpenFile=
+OpenFile=/run/pepeuch-b531-verifier-@RUN_ID@/verifier.sock:worker-verifier
+FileDescriptorStoreMax=0
+ExecStart=
+ExecStart=/usr/bin/python3 -E -s -B -m pepeuch_worker run --worker-dir @WORKER_ROOT@ --credential-file %d/worker.token --verifier-fd 3
