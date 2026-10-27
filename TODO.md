@@ -141,6 +141,15 @@ OpenAI / Mistral / autres providers
 
 **Jalon :** un conteneur Docker peut utiliser correctement l'A2000.
 
+**Checkpoint B3.1 — 27 octobre 2026 (ModelScope POC validé)**
+
+- [x] Créer un adaptateur ModelScope `model_artifact` indépendant de Hugging Face, utilisant le SDK officiel `modelscope-hub==0.4.0`.
+- [x] Valider les métadonnées, identités, licences, restrictions d'accès et valeurs inconnues avec une fixture synthétique et une requête réelle.
+- [x] Exécuter 62/62 tests Python sur la VM.
+- [x] Sonder réellement `Qwen/Qwen3-0.6B` : accès public, licence Apache-2.0, métadonnées normalisées et provenance préservée.
+- [x] Importer le snapshot réel dans PostgreSQL et SurrealDB : 12 ressources par moteur, réimportation idempotente et 405 modèles historiques conservés.
+- [ ] Étendre les sondes à plusieurs modèles et formats ; vérifier les révisions, fichiers, relations et éventuelles restrictions d'accès. L'API sondée ne fournit pas de SHA Git exploitable.
+
 ---
 
 # Phase 2 — Choix et POC de la base de données
