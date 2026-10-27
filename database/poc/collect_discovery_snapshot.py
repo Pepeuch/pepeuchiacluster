@@ -8,6 +8,8 @@ The JSON snapshot goes to stdout; status goes to stderr.
 
 from __future__ import annotations
 
+from metadata_primitives import error_summary, strict_json_loads
+
 import argparse
 import json
 from pathlib import Path
@@ -40,7 +42,7 @@ def collect_modelsdev(source_root: Path, *, commit: str, limit: int) -> list[Sou
     records = []
     for path in paths:
         row = dict(zip(COPY_COLUMNS, make_row(source_root, path, commit), strict=True))
-        raw_metadata = json.loads(row["raw_metadata"])
+        raw_metadata = strict_json_loads(row["raw_metadata"])
         records.append(SourceRecord(
             source="models.dev", source_id=row["model_id"],
             source_revision=commit, entity_type="model_reference",
@@ -138,7 +140,7 @@ def main() -> int:
             scope.update(online_scope)
         snapshot = make_snapshot(records, scope=scope)
     except (OSError, ValueError, TypeError, subprocess.CalledProcessError, tomllib.TOMLDecodeError) as exc:
-        print(f"Discovery collection failed: {exc}", file=sys.stderr)
+        print(error_summary("Discovery collection", exc), file=sys.stderr)
         return 1
     print(f"Prepared {len(snapshot['records'])} cache entries; snapshot {snapshot['snapshot_id']}", file=sys.stderr)
     print(json.dumps(snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False))

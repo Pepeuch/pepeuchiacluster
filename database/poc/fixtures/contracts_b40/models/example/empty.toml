@@ -1,0 +1,2 @@
+# Missing metadata is intentional; counts currently normalize to zero.
+name = "Empty synthetic reference"

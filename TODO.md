@@ -175,6 +175,69 @@ Le connecteur est opérationnel pour les métadonnées publiques en lecture seul
 L'accès réel à l'inférence n'a pas été testé. Le Discovery Service automatisé
 reste à développer ; ces validations portent sur des sondes et imports manuels.
 
+**Checkpoint B4.0 — 27 octobre 2026 (contrats caractérisés, sans changement métier)**
+
+- [x] Documenter la matrice des sept connecteurs, leurs identités, sélections, révisions, accès, inconnues, provenance, relations et transports ; voir [CONTRACTS_B40.md](database/poc/CONTRACTS_B40.md).
+- [x] Extraire les références littérales du commit publié B3.3 : sept SourceRecord, clés B2, empreintes de payload, snapshots déterministes et comparaison partielle ; aucun attendu recalculé automatiquement par les tests.
+- [x] Valider 108 tests, dont 17 tests de caractérisation ; conserver les sorties B2/B3 et les 91 tests historiques, sans réseau ni modification de base.
+- [x] Caractériser NIM : identité par resourceId, tag mutable en révision, plusieurs tags du même service refusés dans un snapshot ; aucune modification de cette règle.
+- [ ] Décider la sémantique future des accès/visibilités, de l'isolation domaines/comptes, des révisions et des collectes partielles avant toute évolution de format ou d'identité.
+- [x] Consolider les primitives sans changer les snapshots de référence : secrets récursifs, copie défensive, parsing JSON et erreurs sûres ; voir [B4_JOURNAL.md](database/poc/B4_JOURNAL.md).
+
+**Checkpoint B4.1 — 27 octobre 2026 (primitives communes validées)**
+
+- [x] Mutualiser seulement les validations équivalentes ; conserver les règles métier, signatures et CLI des sept sources.
+- [x] Copier défensivement SourceRecord, payloads et scopes ; rejeter récursivement les clés de credentials et décoder le JSON sans doublons ni valeurs non finies.
+- [x] Normaliser les diagnostics sans corps d'erreur ni valeur sensible ; préserver le cas NIM 404.
+- [x] Valider 122 tests et toutes les références B3.3 inchangées ; voir [PRIMITIVES_B41.md](database/poc/PRIMITIVES_B41.md).
+- [x] Préparer le transport borné injectable sans retry et l'interface SDK, sans scheduler ni nouvelle collecte automatique.
+
+**Checkpoint B4.2 — 27 octobre 2026 (transport borné préparé et partiellement intégré)**
+
+- [x] Ajouter le client HTTP GET injectable : limites, timeout, allowlist HTTPS, refus des redirections, erreurs sûres et JSON strict ; aucun retry.
+- [x] Migrer CSGHub/MoArk avec équivalence des requêtes et fixtures ; préparer l'interface SDK ModelScope sans réimplémenter son protocole ni importer le SDK au démarrage.
+- [x] Valider 138 tests, les sept références B3.3 et les sorties des trois CLI B3 ; imports PG/SurrealDB générés identiques à B3.3, sans accès base.
+- [ ] Décider et tester la politique de redirections B1 avant sa migration ; préserver le cas NIM 404 et les limites du SDK. Voir [TRANSPORT_B42.md](database/poc/TRANSPORT_B42.md).
+- [x] Préparer l'interface du registre explicite des sept sources, sans collecte ni dépendance optionnelle au démarrage.
+
+**Préparation B4.3 — 27 octobre 2026 (SourceSpec à examiner)**
+
+- [x] Proposer SourceSpec/TransportSpec et une table déclarative des sept sources ; aucun binding CLI, chargement de plugin ou moteur de collecte.
+- [x] Tester les types, sélections, révisions, capacités, immutabilité et absence de chargement de SDK/adaptateur/réseau à l'import ; 146 tests au total.
+- [x] Documenter les limites réelles B1/SDK et les frontières Discovery Cache / fournisseurs d'inférence / Personal Model Catalog ; voir [SOURCE_SPEC_B43.md](database/poc/SOURCE_SPEC_B43.md).
+- [ ] Examiner le prototype et décider multitag NIM, namespaces domaines/comptes, provenance synthétique/réelle et conventions de collecte partielle avant un registre opérationnel.
+- [x] Relier les sept sources à un registre manuel sur fixtures ; budgets, retry, checkpoints et collecte planifiée restent hors de cette préparation.
+
+**Checkpoint B4.3 — 27 octobre 2026 (registre et CLI manuelle sur fixtures)**
+
+- [x] Tester et normaliser la lecture HTTP interrompue : stream fermé, corps partiel ignoré, erreur sûre et aucun retry.
+- [x] Relier les sept normaliseurs au registre SourceSpec, avec imports tardifs, sélection/provenance explicites et contrôle des types et identités de sortie.
+- [x] Ajouter `discover_sources.py --fixtures` et `--list-sources`, sans mode online ni import en base ; voir [DISCOVERY_B43.md](database/poc/DISCOVERY_B43.md).
+- [x] Valider 167 tests sur fixtures uniquement ; sept snapshots et agrégat identiques aux références B3.3, CLI historiques préservées et aucune collecte réelle.
+- [ ] Examiner le registre manuel avant toute extension online ; provenance synthétique/réelle, domaines/comptes, NIM multitag et résultats partiels restent à décider.
+
+**Checkpoint B4.4 — 27 octobre 2026 (budgets et reprises validés hors ligne)**
+
+- [x] Ajouter les politiques explicites par source/ressources : requêtes, tentatives, temps monotone total, plafond de délai et idempotence ; aucune valeur présentée comme quota fournisseur.
+- [x] Classer les erreurs sans contenu sensible ; préserver NIM 404, interdire les retries 401/403/404/304 et erreurs de contrat ; aucune suppression.
+- [x] Ajouter backoff exponentiel saturant, jitter et horloges injectés, Retry-After secondes/dates HTTP validés ; reporter sans attendre si budget/plafond insuffisant. Transport toujours à une tentative.
+- [x] Produire des résultats indépendants et manifestes hors payload B2 ; aucun snapshot après échec, dépassement ou sélection incomplète. Aucune CLI réelle activée.
+- [x] Préparer la protection synthétique optionnelle `--protected-output`, refusée avant SQL par les importeurs B2 existants, sans changer le mode brut historique ; voir [EXECUTION_B44.md](database/poc/EXECUTION_B44.md).
+- [x] Valider 229 tests, dont les 167 précédents inchangés ; snapshots des sept sources et empreintes B3.3 conservés, aucune attente/réseau/base réels dans les tests.
+- [ ] Décider la provenance obligatoire et le contrat d'import avant toute protection complète du B2 brut ; l'option ne remplace pas une validation d'origine.
+- [x] B4.4 publié : `8ce3a8a23eecf4813c467e01c0c67d08b1eb839d`, référence distante vérifiée.
+
+**Checkpoint B4.5 — 27 octobre 2026 (primitives locales, intégration différée)**
+
+- [x] Lier provenance synthétique/contrôlée/historique inconnue au snapshot complet sans changer B2 ; attestation locale distincte d'une preuve fournisseur.
+- [x] Ajouter une API opt-in de génération SQL protégée, refusant synthétique/inconnu/non approuvé ; aucun import réel ni changement des générateurs historiques.
+- [x] Valider un cache au scope, ressources, domaine, partition de compte et révisions exacts ; revalidation 304 injectée, tag NIM toujours mutable.
+- [x] Persister des checkpoints POSIX atomiques privés, intégrité, restauration de génération explicite, refus des écrivains concurrents et aucune purge automatique ; voir [CHECKPOINTS_B45.md](database/poc/CHECKPOINTS_B45.md).
+- [x] Valider 272 tests hors ligne, dont 43 nouveaux ; sept sources et références B3.3 inchangées, aucune collecte réelle ni base.
+- [ ] Définir l'enrôlement/rotation/révocation des émetteurs et la CLI protégée ; HMAC local ne prouve pas une collecte distante.
+- [ ] Raccorder les reçus HTTP conditionnels au moteur budgété, la reprise inter-sources et les politiques de fraîcheur avant de déclarer B4.5 opérationnel.
+- [ ] Définir pagination distante, garanties/quotas SDK, concurrence par hôte et budget global dans des lots séparés ; aucun scheduler.
+
 ---
 
 # Phase 2 — Choix et POC de la base de données

@@ -8,15 +8,14 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum
-import json
 import re
 from typing import Any
 
 from source_adapters import SourceRecord
+from metadata_primitives import copy_metadata, optional_nonnegative_int
 
 
 _COMMIT = re.compile(r"^[0-9a-fA-F]{40}(?:[0-9a-fA-F]{24})?$")
-_SECRET_KEYS = {"api_key", "api_token", "access_token", "authorization", "credentials", "password", "secret", "token"}
 
 
 def _json_default(value: Any) -> Any:
@@ -25,19 +24,6 @@ def _json_default(value: Any) -> Any:
     if isinstance(value, (datetime, date)):
         return value.isoformat()
     raise TypeError(f"Unsupported ModelScope metadata type: {type(value).__name__}")
-
-
-def _secret_free(value: Any) -> None:
-    if isinstance(value, dict):
-        for name, child in value.items():
-            if not isinstance(name, str):
-                raise ValueError("ModelScope metadata keys must be strings")
-            if name.lower() in _SECRET_KEYS:
-                raise ValueError("Refusing credential-like ModelScope metadata")
-            _secret_free(child)
-    elif isinstance(value, list):
-        for item in value:
-            _secret_free(item)
 
 
 def _identifier(value: Any) -> str:
@@ -69,11 +55,7 @@ def _timestamp_or_none(value: Any) -> str | int | float | None:
 
 
 def _nonnegative_int(value: Any, field: str) -> int | None:
-    if value is None:
-        return None
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise ValueError(f"ModelScope {field} must be a nonnegative integer or null")
-    return value
+    return optional_nonnegative_int(value, f"ModelScope {field}")
 
 
 def _visibility(value: Any) -> str:
@@ -98,9 +80,8 @@ def normalize_modelscope_repo(data: dict[str, Any], *, requested_id: str) -> Sou
     requested_id = _identifier(requested_id)
     if not isinstance(data, dict):
         raise ValueError("ModelScope RepoInfo must be an object")
-    _secret_free(data)
     # Ensure raw_metadata stays JSON-safe without stringifying unknown objects.
-    raw = json.loads(json.dumps(data, allow_nan=False, ensure_ascii=False, default=_json_default))
+    raw = copy_metadata(data, default=_json_default)
 
     repository_type = raw.get("repo_type")
     if repository_type is not None and repository_type != "model":

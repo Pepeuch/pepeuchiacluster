@@ -1,0 +1,35 @@
+{
+  "synthetic": true,
+  "note": "B4.0 test inputs only; never import as live observations. B1 examples reuse existing inline test shapes; B3 inputs reuse the existing fixture files.",
+  "huggingface": {
+    "id": "google/gemma-3-1b-it",
+    "sha": "dcc83ea841ab6100d6b47a070329e1ba4cf78752",
+    "gated": "manual",
+    "cardData": {"license": "gemma", "base_model": "google/gemma-3-1b-pt"},
+    "config": {"architectures": ["Gemma3ForCausalLM"]},
+    "safetensors": {"total": 100},
+    "siblings": [{"rfilename": "config.json"}, {"rfilename": "model.safetensors"}]
+  },
+  "awesome-ai-agents": {
+    "id": "aster-712d33a8",
+    "project": "Aster",
+    "project_description": "Local-first agent",
+    "has_public_repository": true,
+    "categories": ["AI Agents"],
+    "sources": [{"source": "github", "source_url": "https://github.com/Zfinix/aster", "stars": 107}]
+  },
+  "nvidia-nim-metadata": {
+    "profiles": [{
+      "profile_id": "opaque-id-1",
+      "tested_gpu_devices": [],
+      "gpu_device": "2571:10de",
+      "gpu": "RTX A2000",
+      "min_vram_per_device_gb": 8,
+      "feat_lora": false,
+      "tensor_parallel_size": 1,
+      "workspace_hash": "opaque-digest"
+    }],
+    "release_details": {"container_version": "1.5.0"},
+    "features": {"tool_calling": false, "context_window": 0, "vgpu_support": true}
+  }
+}

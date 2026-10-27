@@ -13,6 +13,7 @@ import re
 from typing import Any, Iterable
 
 from source_adapters import SourceRecord
+from metadata_primitives import copy_metadata
 
 
 FORMAT = "pepeuch-ai.discovery-cache/v1"
@@ -32,7 +33,7 @@ def record_key(source: str, entity_type: str, source_id: str) -> str:
 
 
 def record_payload(record: SourceRecord) -> dict[str, Any]:
-    return {
+    return copy_metadata({
         "source": record.source,
         "entity_type": record.entity_type,
         "source_id": record.source_id,
@@ -41,7 +42,7 @@ def record_payload(record: SourceRecord) -> dict[str, Any]:
         "attributes": record.attributes,
         "relationships": list(record.relationships),
         "raw_metadata": record.raw_metadata,
-    }
+    })
 
 
 def _record_from_payload(payload: dict[str, Any]) -> SourceRecord:
@@ -79,6 +80,7 @@ def make_snapshot(
 ) -> dict[str, Any]:
     if not isinstance(scope, dict) or not scope:
         raise ValueError("A declared collection scope is required")
+    scope = copy_metadata(scope)
     if captured_at is None:
         captured_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     _validate_time(captured_at)

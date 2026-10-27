@@ -7,6 +7,8 @@ discovery cache. Missing entries are never deleted by an import.
 
 from __future__ import annotations
 
+from metadata_primitives import error_summary, strict_json_loads
+
 import argparse
 import csv
 import json
@@ -97,7 +99,7 @@ def main() -> int:
         # Refuse duplicate keys, corruption and invalid source payload before
         # ANY import statement is printed to stdout.
         with args.snapshot.open("r", encoding="utf-8") as handle:
-            snapshot = json.load(handle, parse_constant=lambda x: (_ for _ in ()).throw(ValueError(x)))
+            snapshot = strict_json_loads(handle.read())
         validate_snapshot(snapshot)
         import io
         buffered = io.StringIO()
@@ -106,7 +108,7 @@ def main() -> int:
         else:
             emit_surreal(snapshot, buffered)
     except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
-        print(f"Discovery import generation failed: {exc}", file=sys.stderr)
+        print(error_summary("Discovery import generation", exc), file=sys.stderr)
         return 1
     sys.stdout.write(buffered.getvalue())
     print(f"Generated {args.engine} import for {len(snapshot['records'])} records", file=sys.stderr)
