@@ -159,6 +159,7 @@ Objectif : choisir le moteur de données avant de figer le schéma.
 - [x] Préparer l'importeur TOML → SurrealQL ; 3 tests supplémentaires réussis (5 tests Python au total), 405 `UPSERT` validés et importés.
 - [x] Comparer les six compteurs PostgreSQL/SurrealDB : 405 modèles, 196 open weights, 397 contextes positifs, 8 nuls, 154 poids, 135 benchmarks.
 - [x] Confirmer les 405 modèles SurrealDB après redémarrage ; exporter et restaurer la sauvegarde dans `poc_restore_20261027`.
+- [x] Valider la parité **14/14 requêtes en lecture seule** entre PostgreSQL et SurrealDB, y compris la régression `tool_call` / tool calling (349 modèles) ; ne pas assimiler les temps CLI/Docker à la latence du moteur.
 - [ ] Comparer les moteurs sur les **mêmes requêtes représentatives**, index et mesures de performance ; aucun choix arrêté.
 
 - [ ] Finaliser le POC comparatif **PostgreSQL vs SurrealDB** (performances, graphe, vecteurs et contraintes d'exploitation).
@@ -207,6 +208,14 @@ benchmark_cases
 
 Objectif : exploiter les catalogues existants au lieu de reconstruire leur travail.
 
+**Checkpoint B1 / B1.1 — 27 octobre 2026 (contrats et sondes seulement)**
+
+- [x] Définir `SourceRecord` indépendant du moteur de base de données : source, identifiant externe, révision, type logique, attributs, relations explicites et métadonnées brutes.
+- [x] Séparer `model_artifact` (Hugging Face), `agent_resource` (Awesome AI Agents) et `nim_microservice` (NVIDIA NIM) ; aucune identité canonique déduite d'un nom ressemblant.
+- [x] Exécuter **33/33 tests Python** localement et sur la VM pour les contrats B1/B1.1 ; sonde NVIDIA réelle identique sur les deux environnements.
+- [x] Fournir les sondes en lecture seule, sans modifier PostgreSQL/SurrealDB, télécharger de poids ni utiliser de GPU ou de clés privées (`database/poc/probe_source_adapters.py`).
+- [ ] Construire l'ingestion incrémentale réelle de ces sources vers le Discovery Cache et définir le contrat d'upsert versionné ; les sondes B1/B1.1 **ne sont pas** des importeurs en base.
+
 ## 3.1 models.dev — source seed principale
 
 - [x] Ajouter `anomalyco/models.dev` comme **git submodule**
@@ -226,7 +235,10 @@ Objectif : exploiter les catalogues existants au lieu de reconstruire leur trava
 
 ## 3.2 Hugging Face — enrichissement open-weight
 
-- [ ] Utiliser l'API officielle Hugging Face
+- [x] Valider une **sonde publique ciblée** de l'API officielle sur `google/gemma-3-1b-it` (accès manuel, safetensors) et `ggml-org/gemma-3-1b-it-GGUF` (public, GGUF), avec SHA propres à chaque dépôt.
+- [x] Normaliser dans le POC `gated`, licence, architecture, formats détectés, fichiers et relations `base_model` explicitement déclarées ; préserver `unknown` lorsque les métadonnées sont absentes.
+- [ ] Étendre l'adaptateur à tous les champs pertinents ci-dessous, puis l'intégrer à la découverte sélective sans aspirer le Hub.
+- [ ] Intégrer l'API officielle Hugging Face au Discovery Service (au-delà de la sonde B1)
 - [ ] Ne pas aspirer tout le Hub
 - [ ] Enrichir uniquement les candidats intéressants ou les familles utiles
 - [ ] Récupérer :
@@ -250,7 +262,10 @@ Objectif : exploiter les catalogues existants au lieu de reconstruire leur trava
 
 ## 3.3 NVIDIA Developer / NGC — enrichissement matériel
 
-- [ ] Utiliser le compte NVIDIA Developer
+- [x] Valider une lecture **sans compte ni clé** de la NIM Metadata API v1.0.0 : `nim/nvidia/parakeet-1-1b-rnnt-multilingual:1.5.0`, 60 profils, dont 12 GPU-agnostic et 48 ciblant d'autres GPU que l'A2000.
+- [x] Ajouter un contrat `nim_microservice` distinct des modèles et un screening conservateur RTX A2000 `2571:10de` / 12 Go / 1 GPU ; **60 profils sans VRAM minimale publiée**, donc aucun profil déclaré compatible ou validé en exécution.
+- [x] Gérer les champs NVIDIA optionnels (`unknown` ≠ `false`), les futurs champs GPU chaîne/liste, et HTTP 404 comme absence de métadonnées **pour un tag**, non comme conteneur inexistant.
+- [ ] Utiliser le compte NVIDIA Developer pour tester l'accès API hébergée et les droits NGC ; ne jamais versionner de clé (B1.1 est entièrement public et non authentifié).
 - [ ] Ajouter authentification optionnelle NGC
 - [ ] Gérer les niveaux d'accès :
   - public
@@ -278,6 +293,12 @@ Objectif : exploiter les catalogues existants au lieu de reconstruire leur trava
 - [ ] autres providers futurs
 - [ ] Stocker coût, contexte, capacités, confidentialité et contraintes
 - [ ] Distinguer modèle sous-jacent et provider qui le sert
+
+## Catalogue distinct de ressources d'agents (Awesome AI Agents)
+
+- [x] Sonder le JSON officiel au commit épinglé `a32e86f60db8dd9556218403532264e0794822c4` : 305 entrées brutes, **304 IDs uniques**, un doublon strictement identique.
+- [x] Normaliser les `agent_resource` et dédupliquer les doublons identiques ; refuser un même ID associé à des contenus divergents.
+- [ ] Décider quelles ressources d'agents conserver dans un index séparé, sans les mélanger aux modèles d'inférence.
 
 **Jalon :** le système peut importer `models.dev`, enrichir un candidat via Hugging Face et NVIDIA, puis produire une fiche normalisée.
 
