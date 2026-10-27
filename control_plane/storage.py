@@ -6,10 +6,12 @@ import fcntl
 import os
 from pathlib import Path
 import secrets
+import re
 import sqlite3
 import stat
+import time
 
-from .contracts import Problem, canonical, decode_json, fields, new_id, sha256
+from .contracts import Problem, canonical, decode_json, fields, new_id, sha256, timestamp
 
 
 @dataclass(frozen=True)
@@ -65,8 +67,39 @@ def write_new(path, data):
         os.fsync(stream.fileno())
 
 
+def migrate_index(con, root, settings, clock):
+    """Apply known migrations inside a caller-owned transaction, including restore."""
+    sources = [(int(path.stem), path.read_bytes()) for path in sorted((Path(__file__).parent / "migrations").glob("*.sql"))]
+    exists = con.execute("SELECT 1 FROM sqlite_master WHERE name='schema_migrations'").fetchone()
+    history = []
+    if exists:
+        history = [tuple(row) for row in con.execute("SELECT version,sha256 FROM schema_migrations ORDER BY version")]
+        if not history or history != [(number, sha256(raw)) for number, raw in sources[:len(history)]]:
+            raise Problem("unsupported_storage_version", 500)
+    elif con.execute("SELECT 1 FROM sqlite_master WHERE type='table'").fetchone():
+        raise Problem("refusing_foreign_database", 500)
+    for number, raw in sources[len(history):]:
+        for statement in raw.decode().split(";"):
+            if statement.strip():
+                con.execute(statement)
+        if number == 1:
+            con.execute("INSERT INTO workspaces VALUES (?,?,?)", (new_id("w"), "local-admin", "local-project"))
+        if number == 2:
+            credential = read_private(root / "secrets/worker.token", 256).strip()
+            if re.fullmatch(rb"[A-Za-z0-9_-]{43}", credential) is None:
+                raise Problem("invalid_local_credential", 500)
+            from .worker_registry import default_limits
+            stamp = timestamp(clock())
+            con.execute("INSERT INTO worker_identities VALUES (?,?,?,?,?,?,?,?)", ("fake-cpu", "active", sha256(credential), 1,
+                        canonical(["demo.report.v1"]), canonical(default_limits(settings)), stamp, stamp))
+        con.execute("INSERT INTO schema_migrations VALUES (?,?)", (number, sha256(raw)))
+
+
 class Store:
-    def __init__(self, root, *, settings=None):
+    def __init__(self, root, *, settings=None, clock=time.time):
+        if sqlite3.sqlite_version_info < (3, 31, 0):
+            raise Problem("sqlite_security_features_required")
+        self.clock = clock
         root = Path(root)
         code_root = Path(__file__).resolve().parents[1]
         if not root.is_absolute() or ".." in root.parts or root.resolve().is_relative_to(code_root):
@@ -122,6 +155,7 @@ class Store:
         con.row_factory = sqlite3.Row
         try:
             con.execute("PRAGMA foreign_keys=ON")
+            con.execute("PRAGMA trusted_schema=OFF")
             con.execute("PRAGMA synchronous=FULL")
             con.execute("BEGIN IMMEDIATE")
             yield con
@@ -133,19 +167,5 @@ class Store:
             con.close()
 
     def _migrate(self):
-        raw = (Path(__file__).parent / "migrations" / "0001.sql").read_bytes()
-        checksum = sha256(raw)
         with self.transaction() as con:
-            exists = con.execute("SELECT 1 FROM sqlite_master WHERE name='schema_migrations'").fetchone()
-            if exists:
-                rows = con.execute("SELECT version,sha256 FROM schema_migrations").fetchall()
-                if [tuple(row) for row in rows] != [(1, checksum)]:
-                    raise Problem("unsupported_storage_version", 500)
-                return
-            if con.execute("SELECT 1 FROM sqlite_master WHERE type='table'").fetchone():
-                raise Problem("refusing_foreign_database", 500)
-            for statement in raw.decode().split(";"):
-                if statement.strip():
-                    con.execute(statement)
-            con.execute("INSERT INTO schema_migrations VALUES (?,?)", (1, checksum))
-            con.execute("INSERT INTO workspaces VALUES (?,?,?)", (new_id("w"), "local-admin", "local-project"))
+            migrate_index(con, self.root, self.settings, self.clock)

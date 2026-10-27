@@ -109,6 +109,7 @@ class Contract:
 class Principal:
     identity: str
     role: str
+    credential_epoch: int | None = None
 
 
 @dataclass(frozen=True)

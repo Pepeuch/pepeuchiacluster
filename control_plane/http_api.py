@@ -5,6 +5,7 @@ Not a production HTTP stack. No cookies, CORS, proxy trust or LAN listener.
 
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.client import HTTPMessage
 from pathlib import Path
 import re
 import threading
@@ -12,6 +13,7 @@ from urllib.parse import urlsplit
 
 from .auth import Authenticator, require_role
 from .contracts import ExecutionResult, Problem, canonical, decode_json
+from .http_io import DeadlineInput
 
 
 @dataclass
@@ -50,6 +52,11 @@ class API:
             return Response(self.service.dashboard(principal))
         if method == "GET" and path == "/api/v1/nodes":
             return Response({"nodes": self.service.execution.nodes(principal)})
+        if method == "GET" and path == "/api/v1/workers":
+            return Response({"workers": self.service.registry.list()})
+        matched = re.fullmatch(r"/api/v1/workers/(fake-cpu|n_[0-9a-f]{32})/revoke", path)
+        if method == "POST" and matched:
+            return Response(self.service.revoke_worker(principal, matched[1], data))
         matched = re.fullmatch(r"/api/v1/workspaces/([a-z]_[0-9a-f]{32})/files", path)
         if matched:
             if method == "GET":
@@ -76,16 +83,19 @@ class LocalServer(ThreadingHTTPServer):
     daemon_threads = False
     block_on_close = True
 
-    def __init__(self, api, *, port=8765, host="127.0.0.1"):
+    def __init__(self, api, *, port=8765, host="127.0.0.1", io_seconds=5, max_connections=16):
         if host != "127.0.0.1":
             raise Problem("loopback_only")
         self.api = api
-        self.slots = threading.BoundedSemaphore(16)
+        if type(io_seconds) not in (int, float) or not 0 < io_seconds <= 5 or type(max_connections) is not int or not 1 <= max_connections <= 16:
+            raise Problem("invalid_http_limits")
+        self.io_seconds = io_seconds
+        self.slots = threading.BoundedSemaphore(max_connections)
         super().__init__((host, port), Handler)
 
     def get_request(self):
         connection, address = super().get_request()
-        connection.settimeout(5)
+        connection.settimeout(self.io_seconds)
         return connection, address
 
     def process_request(self, request, client_address):
@@ -124,6 +134,68 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         self._handle()
+
+    def handle_one_request(self):
+        # Deliberately small HTTP subset: CRLF, origin-form, no folded headers,
+        # duplicates, HTTP/0.9, transfer coding, upgrade or persistent connection.
+        self.request_version, self.command, self.requestline = "HTTP/1.1", "", ""
+        self.close_connection = True
+        reader = DeadlineInput(self.connection, seconds=self.server.io_seconds)
+        try:
+            raw = reader.readline(2049)
+            if not raw:
+                return
+            if len(raw) > 2048:
+                raise Problem("request_line_too_large", 414)
+            match = re.fullmatch(rb"([A-Z]{1,16}) ([\x21-\x7e]+) (HTTP/1\.[01])\r\n", raw)
+            if match is None:
+                raise Problem("invalid_http_request")
+            self.command, self.path, self.request_version = (part.decode("ascii") for part in match.groups())
+            self.headers = HTTPMessage()
+            total, count, seen = 0, 0, set()
+            while True:
+                line = reader.readline(4097)
+                total += len(line)
+                if len(line) > 4096 or total > 16384:
+                    raise Problem("headers_too_large", 431)
+                if line == b"\r\n":
+                    break
+                count += 1
+                if count > 32:
+                    raise Problem("headers_too_large", 431)
+                header = re.fullmatch(rb"([!#$%&'*+.^_`|~0-9A-Za-z-]+):([\x20-\x7e]*)\r\n", line)
+                if header is None:
+                    raise Problem("invalid_http_request")
+                name, value = (part.decode("ascii") for part in header.groups())
+                if name.lower() in seen:
+                    raise Problem("duplicate_header")
+                seen.add(name.lower())
+                self.headers[name] = value.strip(" ")
+            if "transfer-encoding" in seen:
+                raise Problem("invalid_body_framing")
+            if "expect" in seen or "upgrade" in seen:
+                raise Problem("unsupported_http_feature", 417)
+            length = self.headers.get("Content-Length")
+            if length is not None and re.fullmatch(r"[0-9]{1,8}", length) is None:
+                raise Problem("invalid_body_framing")
+            if length is not None and int(length) > 1_500_000:
+                raise Problem("request_too_large", 413)
+            if self.command != "POST" and length is not None and int(length) != 0:
+                raise Problem("unexpected_body")
+            if self.command not in {"GET", "POST"}:
+                raise Problem("method_not_allowed", 405)
+            previous = self.rfile
+            self.rfile = reader
+            try:
+                self._handle()
+            finally:
+                self.rfile = previous
+        except TimeoutError:
+            self._respond(Response({"error": "http_timeout"}, 408))
+        except Problem as exc:
+            self._respond(Response({"error": exc.code}, exc.status))
+        except (OSError, UnicodeError, ValueError):
+            self._respond(Response({"error": "invalid_http_request"}, 400))
 
     def _handle(self):
         try:
@@ -171,6 +243,8 @@ class Handler(BaseHTTPRequestHandler):
             elif lengths and lengths != ["0"]:
                 raise Problem("unexpected_body")
             response = self.server.api.dispatch(self.command, self.path, principal, data)
+        except TimeoutError:
+            response = Response({"error": "http_timeout"}, 408)
         except Problem as exc:
             response = Response({"error": exc.code}, exc.status)
         except Exception:
@@ -185,6 +259,7 @@ class Handler(BaseHTTPRequestHandler):
             headers = {
                 "Content-Type": "application/json; charset=utf-8", "Content-Length": str(len(raw)),
                 "Connection": "close", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+                "Cross-Origin-Resource-Policy": "same-origin", "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
                 "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY",
                 "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
                 **response.headers,
@@ -192,6 +267,7 @@ class Handler(BaseHTTPRequestHandler):
             for key, value in headers.items():
                 self.send_header(key, value)
             self.end_headers()
-            self.wfile.write(raw)
+            if self.command != "HEAD":
+                self.wfile.write(raw)
         except (OSError, ValueError):
             pass

@@ -53,3 +53,16 @@ exposition LAN/Internet. Le répertoire `/tmp` sert ici à une démo jetable ; c
 un répertoire durable privé hors du code pour conserver les missions au-delà du
 nettoyage de `/tmp`. Guide complet, tests, limites et sauvegarde :
 [B51_IMPLEMENTATION.md](docs/architecture/B51_IMPLEMENTATION.md).
+
+## B5.2 — sécurité et résilience locales
+
+HTTP borné, sauvegardes/restaurations vérifiées hors ligne et registre de workers
+avec révocation et rotation des credentials. L'exécution reste simulée, sur
+loopback uniquement ; aucune isolation OS ou exposition production n'est annoncée.
+
+Les commandes `backup`, `restore`, `worker-enroll` et `worker-rotate` sont
+documentées dans [B52_IMPLEMENTATION.md](docs/architecture/B52_IMPLEMENTATION.md).
+Une restauration crée de nouvelles clés et conserve les workers révoqués jusqu'à
+leur réactivation explicite. La procédure de
+[validation Debian 13/Python 3.13](docs/architecture/B52_DEBIAN13_VALIDATION.md)
+est préparée sans modification de la VM existante.

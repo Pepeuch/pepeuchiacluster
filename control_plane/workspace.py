@@ -6,17 +6,21 @@ import os
 import re
 
 from .auth import require_role, workspace_access
-from .contracts import Problem, fields, identifier, new_id, sha256, timestamp
+from .contracts import Problem, decode_json, fields, identifier, new_id, sha256, timestamp
 from .storage import private_directory, read_private, write_new
 
 
-def output_data(data, limit):
-    fields(data, ("name", "content_base64", "size", "sha256", "expected_version"))
-    name = data["name"]
+def file_name(name):
     reserved = {"CON", "PRN", "AUX", "NUL", *("COM" + str(n) for n in range(1, 10)), *("LPT" + str(n) for n in range(1, 10))}
     if (not isinstance(name, str) or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,119}", name) is None
             or name.endswith(".") or name.split(".")[0].upper() in reserved):
         raise Problem("unsafe_file_name")
+    return name
+
+
+def output_data(data, limit):
+    fields(data, ("name", "content_base64", "size", "sha256", "expected_version"))
+    name = file_name(data["name"])
     if type(data["size"]) is not int or data["size"] < 0:
         raise Problem("invalid_file_size")
     if data["size"] > limit:
@@ -105,7 +109,9 @@ class WorkspaceManager:
         require_role(principal, "worker")
         if principal.identity != attempt["worker_id"]:
             raise Problem("access_denied", 403)
-        name, raw = output_data(output, min(65536, self.service.store.settings.max_file_bytes))
+        worker = self.service.registry.authorize(con, principal)
+        limit = decode_json(worker["limits"])["max_output_bytes"]
+        name, raw = output_data(output, min(65536, self.service.store.settings.max_file_bytes, limit))
         if name != "resultat.md" or output["expected_version"] != attempt["expected_version"]:
             raise Problem("result_contract_mismatch", 409)
         published = self._publish(con, principal, mission["workspace_id"], name, raw, attempt["expected_version"],

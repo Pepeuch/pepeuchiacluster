@@ -1,3 +1,3 @@
 # No third-party Python packages. Run from the repository with python3 -m control_plane.
-# Runtime: CPython 3.11-3.13 with stdlib sqlite3 (SQLite >= 3.15.2), POSIX/Linux.
+# Runtime: CPython 3.11-3.13 with stdlib sqlite3 (SQLite >= 3.31.0), POSIX/Linux.
 # Runtime versions and upstream license references: docs/architecture/B51_IMPLEMENTATION.md.

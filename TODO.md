@@ -260,10 +260,23 @@ reste à développer ; ces validations portent sur des sondes et imports manuels
 - [x] B5.1c : fichiers versionnés immuables, staging/intégrité/publication durable, upload/download bornés, quotas et conflits concurrents ; résultat et historique conservés après redémarrage.
 - [x] B5.1d : trois sections WebUI responsive, formulaire et brouillon, confirmation d'envoi, suivi, fichiers autorisés et livrables ; ressources locales, pas de cookies/CDN.
 - [x] Valider 69 tests B5.1 et un parcours Firefox complet, worker séparé et redémarrage inclus ; conserver les 272 tests Discovery Cache sans modification. Voir [B51_IMPLEMENTATION.md](docs/architecture/B51_IMPLEMENTATION.md).
-- [ ] Avant B5.2 : choisir une pile HTTP durcie, identité/révocation, sauvegarde/restauration réellement éprouvée et isolation OS d'un vrai worker ; le serveur stdlib reste un prototype loopback.
+- [ ] Finaliser la pile HTTP de production et l'isolation OS d'un vrai worker ; les contrôles locaux HTTP/identité/sauvegarde sont validés au checkpoint B5.2, sans exposition LAN.
 - [ ] Définir les contrats agents/rôles/baux réels, appairage/TLS et politiques multi-utilisateurs avant une ouverture LAN ou exécution d'outils ; aucune installation, inférence ou collecte réelle dans B5.1.
 
+**Checkpoint B5.2 — 27 octobre 2026 (sécurité et résilience locales)**
+
+- [x] Partir de `main` actualisé (`a822b4d`, B5.1 mergé), sur `feat/webui-control-plane-b52` ; commits locaux par lot, aucun push ni merge B5.2.
+- [x] B5.2a : cadrage HTTP strict, limites des lignes/en-têtes/corps/connexions, deadlines absolues de lecture, réponses sans secrets ni cache ; sous-ensemble loopback, pas de validation production.
+- [x] B5.2b : sauvegarde cohérente hors ligne et restauration dans une destination inexistante, schéma/FK/références/SHA256 vérifiés, secrets exclus et clés renouvelées ; interruptions/corruptions testées, aucune purge automatique.
+- [x] B5.2c : registre d'identités stable, capacités de démonstration fermées, rotation hors ligne et révocation en ligne ; autorisation transactionnelle, epochs de credentials et refus des anciens résultats. Migration applicative B5.1 compatible.
+- [x] Préparer séparément [l'isolation OS](docs/architecture/WORKER_ISOLATION_B52.md) ; aucun UID, conteneur, montage ou quota CPU/RAM appliqué dans ce lot.
+- [x] B5.2d : 395 tests Python réussis (272 Discovery + 123 Control Plane, dont les 341 initiaux inchangés), scénario Firefox B5.1 rejoué, restauration et anciens formats vérifiés ; voir [B52_IMPLEMENTATION.md](docs/architecture/B52_IMPLEMENTATION.md).
+- [x] Préparer [la validation Debian 13/Python 3.13](docs/architecture/B52_DEBIAN13_VALIDATION.md) sans modifier la VM existante.
+- [ ] Exécuter cette validation dans un environnement distinct autorisé ; aucun succès Debian 13/Python 3.13 annoncé avant essai.
+- [ ] Avant un vrai worker : isolation OS éprouvée, politiques réseau/outils/enfants, PKI/appairage/TLS et pile HTTP de production ; conserver le prototype sans IA réelle ni découverte LAN.
+
 # Phase 2 — Choix et POC de la base de données
+
 
 Objectif : choisir le moteur de données avant de figer le schéma.
 
