@@ -1,0 +1,40 @@
+{
+  "format": "pepeuch-ai.fixture-discovery/v1",
+  "synthetic": true,
+  "captured_at": "2026-10-27T00:00:00+00:00",
+  "sources": {
+    "models.dev": {
+      "fixture": "contracts_b40",
+      "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "scope": {"mode": "first_n_sorted", "limit": 1}
+    },
+    "huggingface": {
+      "fixture": "contracts_b40/inputs.synthetic.json",
+      "payload_key": "huggingface",
+      "scope": {"mode": "exact_ids", "ids": ["google/gemma-3-1b-it"]}
+    },
+    "awesome-ai-agents": {
+      "fixture": "contracts_b40/inputs.synthetic.json",
+      "payload_key": "awesome-ai-agents",
+      "revision": "5555555555555555555555555555555555555555",
+      "scope": {"mode": "first_n_unique", "limit": 1}
+    },
+    "nvidia-nim-metadata": {
+      "fixture": "contracts_b40/inputs.synthetic.json",
+      "payload_key": "nvidia-nim-metadata",
+      "scope": {"mode": "exact_tag", "resource_id": "nim/nvidia/parakeet-1-1b-rnnt-multilingual", "tag": "1.5.0"}
+    },
+    "modelscope": {
+      "fixture": "modelscope_repoinfo.synthetic.json",
+      "scope": {"mode": "exact_ids", "ids": ["Qwen/Qwen3-0.6B"], "endpoint": "https://modelscope.cn"}
+    },
+    "csghub": {
+      "fixture": "csghub_model_info.synthetic.json",
+      "scope": {"mode": "exact_ids", "ids": ["OpenCSG/csg-wukong-1B"], "endpoint": "https://hub.opencsg.com", "source": "csg", "revision_request": "main"}
+    },
+    "moark": {
+      "fixture": "moark_models.synthetic.json",
+      "scope": {"mode": "exact_ids", "ids": ["Qwen3-8B"], "endpoint": "https://moark.ai/v1", "catalog_url": "https://moark.ai/v1/models?type=text2text&include_details=false", "authentication": "anonymous", "input": "synthetic_fixture"}
+    }
+  }
+}

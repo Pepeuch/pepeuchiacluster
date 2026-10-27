@@ -206,7 +206,15 @@ reste à développer ; ces validations portent sur des sondes et imports manuels
 - [x] Tester les types, sélections, révisions, capacités, immutabilité et absence de chargement de SDK/adaptateur/réseau à l'import ; 146 tests au total.
 - [x] Documenter les limites réelles B1/SDK et les frontières Discovery Cache / fournisseurs d'inférence / Personal Model Catalog ; voir [SOURCE_SPEC_B43.md](database/poc/SOURCE_SPEC_B43.md).
 - [ ] Examiner le prototype et décider multitag NIM, namespaces domaines/comptes, provenance synthétique/réelle et conventions de collecte partielle avant un registre opérationnel.
-- [ ] Concevoir ensuite un binding manuel sur fixtures ; budgets, retry, checkpoints et collecte planifiée restent hors de cette préparation.
+- [x] Relier les sept sources à un registre manuel sur fixtures ; budgets, retry, checkpoints et collecte planifiée restent hors de cette préparation.
+
+**Checkpoint B4.3 — 27 octobre 2026 (registre et CLI manuelle sur fixtures)**
+
+- [x] Tester et normaliser la lecture HTTP interrompue : stream fermé, corps partiel ignoré, erreur sûre et aucun retry.
+- [x] Relier les sept normaliseurs au registre SourceSpec, avec imports tardifs, sélection/provenance explicites et contrôle des types et identités de sortie.
+- [x] Ajouter `discover_sources.py --fixtures` et `--list-sources`, sans mode online ni import en base ; voir [DISCOVERY_B43.md](database/poc/DISCOVERY_B43.md).
+- [x] Valider 167 tests sur fixtures uniquement ; sept snapshots et agrégat identiques aux références B3.3, CLI historiques préservées et aucune collecte réelle.
+- [ ] Examiner le registre manuel avant toute extension online ; provenance synthétique/réelle, domaines/comptes, NIM multitag et résultats partiels restent à décider.
 
 ---
 

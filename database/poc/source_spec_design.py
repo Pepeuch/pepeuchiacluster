@@ -1,6 +1,6 @@
-"""B4.3 design prototype: static source descriptions, no collectors/loaders.
+"""B4.3 static source descriptions, consumed by the separate fixture registry.
 
-Not wired to any CLI. Does not import adapters, optional SDKs or plugins, open
+This module does not import adapters, optional SDKs or plugins, open
 connections, compute B2 identities, or decide admission to a personal catalog.
 """
 
@@ -98,7 +98,7 @@ class SourceSpec:
 
 
 def source_index(specs: Iterable[SourceSpec]) -> Mapping[str, SourceSpec]:
-    """A read-only design index; duplicate namespaces fail, never replace."""
+    """A read-only description index; duplicate namespaces fail, never replace."""
     result = {}
     for spec in specs:
         if not isinstance(spec, SourceSpec):

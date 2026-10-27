@@ -5,6 +5,11 @@ les sept connecteurs après B4.2. **Il n'est relié à aucune CLI et n'exécute 
 collecte.** Un registre orchestrant les sources reste un lot ultérieur.
 Les 146 tests du dépôt POC passent, références B3.3 inchangées.
 
+Cette section décrit l'étape initiale de conception. Le branchement manuel des
+sept adaptateurs sur leurs fixtures est désormais disponible dans un module
+séparé ; voir [DISCOVERY_B43.md](DISCOVERY_B43.md). Le module de descriptions reste
+inerte et n'importe aucun adaptateur ou SDK. Aucun branchement online n'est ajouté.
+
 ## SourceSpec proposé
 
 | Champ | Sens | Ne doit pas servir à |

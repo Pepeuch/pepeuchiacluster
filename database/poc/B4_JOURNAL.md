@@ -84,7 +84,7 @@ Aucune modification préexistante sans rapport n'a été déplacée ou effacée.
   synthétique/réel, accès/visibilité, succès partiels, redirects B1 et garanties SDK.
   Le futur binding collecteur/registre doit faire l'objet d'une revue séparée.
 
-## Revue finale
+## Revue finale de la session initiale
 
 - Les 11 fichiers de tests historiques (91 cas) sont identiques au commit B3.3.
   Les signatures des fonctions publiques et les déclarations d'options CLI
@@ -100,7 +100,44 @@ Aucune modification préexistante sans rapport n'a été déplacée ou effacée.
 - Aucune requête fournisseur, inférence, GPU, base, migration ou planification
   exécutée. La branche B3.3 de référence et `main` ne sont pas modifiées.
 
+## B4.3 — liaisons et CLI commune sur fixtures (27 octobre 2026)
+
+- Point de départ propre : `6483cb9`, branche `feat/discovery-b4-consolidation`.
+  Travail limité aux sept demandes suivantes : lecture HTTP interrompue, liaisons
+  SourceSpec, CLI commune manuelle, fixtures seulement, comparaison B3.3, CLI
+  historiques préservées et aucun réseau réel/import en base.
+- Ajouts : `discovery_registry.py`, `discover_sources.py`,
+  `fixtures/discovery_b43.synthetic.json`, `test_discovery_registry.py` et
+  `DISCOVERY_B43.md`. Mise à jour de TODO et des documents SourceSpec/transport.
+- Les liaisons sont explicites, immuables et tardives, sans résolution de module
+  depuis la configuration. Sept normaliseurs existants, aucun nouveau client
+  online ni SDK importé pour normaliser les fixtures.
+- Le manifeste sépare chemins locaux, scope et révisions de catalogue ; lectures
+  JSON bornées/strictes, provenance synthétique obligatoire, contrôle des modes,
+  identités et types contre SourceSpec. Paths hors répertoire et symlinks sont
+  refusés, y compris dans l'arbre TOML ; aucun import ou fichier de base généré.
+- `--fixtures` et `--list-sources` sont explicites et mutuellement exclusifs ;
+  `--source` répétable et date d'observation modifiable. Pas d'exécution implicite
+  ou de mode online. Le JSON est validé avant stdout ; une erreur tardive ne
+  publie aucun résultat partiel. Diagnostic synthétique sur stderr seulement.
+- Le premier test a confirmé qu'IncompleteRead n'était pas normalisé. Le client
+  le traite maintenant comme erreur réseau sans corps, fermeture du stream et
+  aucun retry. Un second test reproduit avec HTTPResponse en mémoire la lecture
+  courte sans exception : Content-Length est maintenant vérifié et borné.
+- Ajout de trois tests transport (dont coupure/timeout et framing) et 18 tests
+  registre/CLI. Les interpréteurs de test interdisent réseau, SDK, clients DB,
+  subprocessus de collecte et lecture des résultats attendus par le runtime.
+- **167 tests réussis** ; sept snapshots individuels et agrégat strictement
+  identiques aux références B3.3. Aucun attendu régénéré ; SHA256 du fichier de
+  référence toujours `ef2e2834d86448aa5ef5ee8b95f5b6d42555684b0a588b837d83abb0775d36bd`.
+  Les trois CLI B3 sont exécutées sur fixtures et comparées hors date ; les
+  tests historiques et les options CLI existantes sont conservés.
+- Aucune collecte réelle, inférence, poids, GPU, requête payante, base, migration
+  ou planification. Modifications laissées pour revue, sans commit ni push de ce lot.
+
 ## Travaux suivants
 
-Revoir SourceSpec puis préparer un binding manuel sur fixtures, sans automatisation.
+Revoir le registre manuel sur fixtures avant toute extension online. Décisions
+de provenance synthétique/réelle, domaines/comptes, NIM multitag et succès partiels
+toujours ouvertes ; aucun checkpoint, retry ou traitement périodique ajouté.
 Pas de scheduler ni modification du Personal Model Catalog.
