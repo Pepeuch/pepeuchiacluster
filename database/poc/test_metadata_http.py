@@ -1,6 +1,8 @@
 """B4.2 transport tests: simulated responses only, no external or local server."""
 
 import socket
+from http.client import HTTPResponse, IncompleteRead
+from io import BytesIO
 import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
@@ -161,6 +163,78 @@ class MetadataHTTPTests(unittest.TestCase):
             build.return_value.open.return_value = Response()
             with self.assertRaises(MetadataHTTPError):
                 get_metadata_json(URL, policy=POLICY)
+
+    def test_interrupted_response_read_closes_stream_without_partial_json_or_retry(self):
+        for error, expected in (
+            (IncompleteRead(b'{"id":"SYNTHETIC-PARTIAL"}', 99), MetadataNetworkError),
+            (ConnectionResetError("SYNTHETIC connection detail"), MetadataNetworkError),
+            (TimeoutError("SYNTHETIC read timeout"), MetadataTimeoutError),
+        ):
+            with self.subTest(error=type(error).__name__):
+                class Response:
+                    status = 200
+                    closed = False
+                    reads = []
+                    def __enter__(self): return self
+                    def __exit__(self, *args): self.closed = True
+                    def read(self, n):
+                        self.reads.append(n)
+                        raise error
+                response = Response()
+                with patch("metadata_http.build_opener") as build, \
+                        patch("metadata_http.strict_json_loads") as decode:
+                    build.return_value.open.return_value = response
+                    with self.assertRaises(expected) as caught:
+                        get_metadata_json(URL, policy=POLICY)
+                    build.return_value.open.assert_called_once()
+                    decode.assert_not_called()
+                self.assertTrue(response.closed)
+                self.assertEqual(response.reads, [POLICY.max_response_bytes + 1])
+                self.assertNotIn("SYNTHETIC", str(caught.exception))
+                self.assertNotIn("SYNTHETIC", error_summary("Fixture", caught.exception))
+                self.assertTrue(caught.exception.__suppress_context__)
+
+    def test_short_content_length_body_is_rejected_even_if_bounded_read_returns_valid_json(self):
+        # HTTPResponse.read(n) can return a short body without IncompleteRead.
+        # Exercise the actual stdlib parser using in-memory wire bytes only.
+        class Socket:
+            def makefile(self, *args):
+                return BytesIO(b'HTTP/1.1 200 OK\r\nContent-Length: 50\r\n\r\n{"id":"SYNTHETIC-PARTIAL"}')
+        response = HTTPResponse(Socket())
+        response.begin()
+        with patch("metadata_http.build_opener") as build, patch("metadata_http.strict_json_loads") as decode:
+            build.return_value.open.return_value = response
+            with self.assertRaises(MetadataNetworkError) as caught:
+                get_metadata_json(URL, policy=POLICY)
+            build.return_value.open.assert_called_once()
+            decode.assert_not_called()
+        self.assertTrue(response.closed)
+        self.assertNotIn("SYNTHETIC", str(caught.exception))
+
+    def test_content_length_bounds_and_valid_header_are_checked_before_json(self):
+        for length, valid, reads in (("2", True, 1), (" 0002 ", True, 1),
+                                     ("101", False, 0), ("9" * 5000, False, 0),
+                                     ("invalid", False, 0), ("-1", False, 0),
+                                     ("2, 3", False, 0), ("1", False, 1)):
+            with self.subTest(length=length[:20]):
+                class Response:
+                    status = 200
+                    headers = {"Content-Length": length}
+                    reads = 0
+                    closed = False
+                    def __enter__(self): return self
+                    def __exit__(self, *args): self.closed = True
+                    def read(self, n): self.reads += 1; return b'{}'
+                response = Response()
+                with patch("metadata_http.build_opener") as build:
+                    build.return_value.open.return_value = response
+                    if valid:
+                        self.assertEqual(get_metadata_json(URL, policy=POLICY), {})
+                    else:
+                        with self.assertRaises(MetadataResponseError):
+                            get_metadata_json(URL, policy=POLICY)
+                self.assertEqual(response.reads, reads)
+                self.assertTrue(response.closed)
 
     def test_nim_404_remains_metadata_unavailable_only_for_selected_tag(self):
         from probe_source_adapters import NIM_RESOURCE, NIM_TAG, audit_nvidia_nim

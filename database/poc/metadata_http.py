@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from http.client import IncompleteRead
 import math
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
@@ -82,7 +83,27 @@ class UrllibTransport:
             status = getattr(response, "status", 200)
             # urllib normally raises HTTPError first, but explicit status checks
             # also protect injected openers. Do not read error/redirect bodies.
-            body = response.read(max_bytes + 1) if status == 200 else b""
+            body = b""
+            if status == 200:
+                headers = getattr(response, "headers", None)
+                length = headers.get("Content-Length") if headers is not None else None
+                expected = None
+                if length is not None:
+                    if not isinstance(length, str) or not length.strip().isascii() or not length.strip().isdecimal():
+                        raise MetadataResponseError("Invalid metadata response length")
+                    digits = length.strip().lstrip("0") or "0"
+                    if len(digits) > len(str(max_bytes)) or int(digits) > max_bytes:
+                        raise MetadataResponseError("Metadata response exceeded size limit")
+                    expected = int(digits)
+                body = response.read(max_bytes + 1)
+                if not isinstance(body, bytes):
+                    raise MetadataResponseError("Metadata response must be bytes")
+                if expected is not None and len(body) < expected:
+                    # With an explicit read bound, HTTPResponse may not raise
+                    # IncompleteRead itself when EOF arrives before Content-Length.
+                    raise MetadataNetworkError("Metadata response interrupted")
+                if expected is not None and len(body) > expected:
+                    raise MetadataResponseError("Metadata response length mismatch")
         return HTTPResult(status, body)
 
 
@@ -127,6 +148,9 @@ def get_metadata_json(url: str, *, policy: HTTPPolicy, transport: MetadataTransp
         if type(status) is not int or not 100 <= status <= 599:
             raise MetadataNetworkError("Invalid metadata HTTP status") from None
         raise MetadataHTTPError(status) from None
+    except IncompleteRead:
+        # Never decode a partial body, even when its prefix is valid JSON.
+        raise MetadataNetworkError("Metadata response interrupted") from None
     except TimeoutError:
         raise MetadataTimeoutError("Metadata request timed out") from None
     except URLError as exc:

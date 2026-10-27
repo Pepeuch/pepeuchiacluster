@@ -100,3 +100,8 @@ ne pas déduire ces garanties d'une `HTTPPolicy` prévue pour urllib.
 Les problèmes de compte/domaine, JSON d'observation synthétique/réel, granularité
 des révisions et sélection partielle restent des décisions de contrat/registre,
 pas des règles du transport HTTP.
+
+Complément B4.3 : la lecture interrompue est testée pendant `response.read()`.
+`IncompleteRead` est normalisé en erreur réseau sûre ; timeout et connexion coupée
+conservent leur classement. Le stream est fermé sans décodage du corps partiel,
+sans retry. Voir [DISCOVERY_B43.md](DISCOVERY_B43.md).
