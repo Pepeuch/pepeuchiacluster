@@ -192,6 +192,55 @@ Aucune modification préexistante sans rapport n'a été déplacée ou effacée.
 
 ## Travaux suivants
 
+### Blocage de publication B4.4 — 27 octobre 2026 (historique, résolu ci-dessous)
+
+- Commit local validé : `8ce3a8a23eecf4813c467e01c0c67d08b1eb839d`.
+  Message : `feat(discovery): add controlled metadata execution budgets and retries`.
+- La première revue automatique a refusé le push faute d'autorisation reconnue.
+  Après vérification des lignes 82–87 de la mission utilisateur et du seul commit
+  d'avance sans divergence, la même publication limitée au SHA B4.4 a été acceptée.
+- Le push a alors échoué : `fatal: could not read Username for 'https://github.com':
+  No such device or address`. Aucun identifiant HTTPS Git accessible, aucun push
+  effectué, aucun contournement de l'authentification tenté.
+- Conformément à l'arrêt demandé en cas d'identifiants nécessaires, B4.5 n'a pas
+  commencé et la branche documentaire B5 n'a pas été créée : elle doit partir du
+  commit B4.4 effectivement publié. `main` et la branche B3.3 sont préservées.
+- Cette note reste non commitée afin de ne pas ajouter un second commit à la
+  publication B4.4 autorisée. Une authentification Git sur cette machine est
+  nécessaire avant de relancer le push du SHA ci-dessus, puis vérifier le distant.
+
+### Publication B4.4 confirmée et reprise — 27 octobre 2026
+
+- L'utilisateur a publié lui-même B4.4. Après récupération des références,
+  `git ls-remote origin refs/heads/feat/discovery-b4-consolidation` confirme
+  `8ce3a8a23eecf4813c467e01c0c67d08b1eb839d`, identique à HEAD et à la référence
+  distante locale. Aucun nouveau push nécessaire ni effectué par cette reprise.
+- Les lignes locales ci-dessus sont conservées comme historique de l'incident ;
+  leur demande d'authentification et leur état d'arrêt ne sont plus courants.
+- Suite de départ rejouée : **229 tests réussis**. La reprise B4.5 est autorisée,
+  avec commits locaux uniquement. B5.0 part séparément du SHA B4.4 publié.
+
+### B4.5 — tranche de primitives locales validée
+
+- Manifestes de provenance versionnés liés à l'identité, au scope et au SHA256
+  du snapshot complet. Trois catégories distinctes ; attestations HMAC par
+  émetteurs locaux approuvés, aucune prétention de preuve d'origine fournisseur.
+- API opt-in de génération SQL protégée : refus des synthétiques, historiques
+  inconnus et émetteurs non approuvés avant toute sortie. Importeurs B2 inchangés.
+- Cache à source/sélection/ressources/contexte/révisions exacts. `unchanged`
+  disponible dans une primitive de revalidation injectée uniquement ; le 304
+  du moteur B4.4 conserve son échec sans cache raccordé. Tag NIM toujours mutable.
+- Checkpoints POSIX privés versionnés, empreintes vérifiées, écriture atomique,
+  verrou exclusif non bloquant, générations explicites et rétention sans purge.
+  Tests d'interruptions, redémarrage, chemins/liens, concurrence et idempotence.
+- **272 tests réussis**, dont les 229 existants et 43 nouveaux ; références B3.3
+  et sorties des sept sources intactes. SHA256 de la référence inchangé :
+  `ef2e2834d86448aa5ef5ee8b95f5b6d42555684b0a588b837d83abb0775d36bd`.
+- Voir `CHECKPOINTS_B45.md` pour les limites : raccordement HTTP/budgets/reprise
+  inter-sources, gestion des clés, CLI protégée et fraîcheur encore différés.
+  B4.5 n'est pas annoncé comme service opérationnel complet. Aucun réseau
+  fournisseur, import base, poids, inférence, GPU, scheduler ou push B4.5/B5.
+
 Revoir le registre manuel sur fixtures avant toute extension online. Décisions
 de provenance synthétique/réelle, domaines/comptes, NIM multitag et succès partiels
 toujours ouvertes. Les retries B4.4 existent uniquement dans l'API d'exécution

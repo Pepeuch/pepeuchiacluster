@@ -225,7 +225,18 @@ reste à développer ; ces validations portent sur des sondes et imports manuels
 - [x] Préparer la protection synthétique optionnelle `--protected-output`, refusée avant SQL par les importeurs B2 existants, sans changer le mode brut historique ; voir [EXECUTION_B44.md](database/poc/EXECUTION_B44.md).
 - [x] Valider 229 tests, dont les 167 précédents inchangés ; snapshots des sept sources et empreintes B3.3 conservés, aucune attente/réseau/base réels dans les tests.
 - [ ] Décider la provenance obligatoire et le contrat d'import avant toute protection complète du B2 brut ; l'option ne remplace pas une validation d'origine.
-- [ ] B4.5 : concevoir cache exact-scope avant 304/unchanged, checkpoints atomiques/rétention/reprise après arrêt, sélections paginées et garanties SDK ; concurrence par hôte et budget global restent ultérieurs.
+- [x] B4.4 publié : `8ce3a8a23eecf4813c467e01c0c67d08b1eb839d`, référence distante vérifiée.
+
+**Checkpoint B4.5 — 27 octobre 2026 (primitives locales, intégration différée)**
+
+- [x] Lier provenance synthétique/contrôlée/historique inconnue au snapshot complet sans changer B2 ; attestation locale distincte d'une preuve fournisseur.
+- [x] Ajouter une API opt-in de génération SQL protégée, refusant synthétique/inconnu/non approuvé ; aucun import réel ni changement des générateurs historiques.
+- [x] Valider un cache au scope, ressources, domaine, partition de compte et révisions exacts ; revalidation 304 injectée, tag NIM toujours mutable.
+- [x] Persister des checkpoints POSIX atomiques privés, intégrité, restauration de génération explicite, refus des écrivains concurrents et aucune purge automatique ; voir [CHECKPOINTS_B45.md](database/poc/CHECKPOINTS_B45.md).
+- [x] Valider 272 tests hors ligne, dont 43 nouveaux ; sept sources et références B3.3 inchangées, aucune collecte réelle ni base.
+- [ ] Définir l'enrôlement/rotation/révocation des émetteurs et la CLI protégée ; HMAC local ne prouve pas une collecte distante.
+- [ ] Raccorder les reçus HTTP conditionnels au moteur budgété, la reprise inter-sources et les politiques de fraîcheur avant de déclarer B4.5 opérationnel.
+- [ ] Définir pagination distante, garanties/quotas SDK, concurrence par hôte et budget global dans des lots séparés ; aucun scheduler.
 
 ---
 
