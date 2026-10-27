@@ -6,7 +6,7 @@ import os
 import re
 
 from .auth import require_role, workspace_access
-from .contracts import Problem, decode_json, fields, identifier, new_id, sha256, timestamp
+from .contracts import Problem, canonical, decode_json, fields, identifier, new_id, sha256, timestamp
 from .storage import private_directory, read_private, write_new
 
 
@@ -116,8 +116,11 @@ class WorkspaceManager:
             raise Problem("result_contract_mismatch", 409)
         published = self._publish(con, principal, mission["workspace_id"], name, raw, attempt["expected_version"],
                                   mission_id=mission["id"], attempt_id=attempt["id"])
-        con.execute("INSERT INTO results VALUES (?,?,?,?)", (new_id("r"), attempt["id"], published["version_id"],
-                    '{"simulated":true,"capability":"demo.report.v1","verification":"deterministic_demo_only"}'))
+        from .capabilities import DEMO, CPU_DIGEST
+        provenance = ('{"simulated":true,"capability":"demo.report.v1","verification":"deterministic_demo_only"}'
+                      if attempt["capability"] == DEMO else canonical({"simulated": False, "capability": CPU_DIGEST,
+                          "verification": "worker_reported_cpu_digest", "ai_inference": False, "os_isolation": "NOT VERIFIED"}))
+        con.execute("INSERT INTO results VALUES (?,?,?,?)", (new_id("r"), attempt["id"], published["version_id"], provenance))
         return published
 
     def list_files(self, principal, workspace_id):

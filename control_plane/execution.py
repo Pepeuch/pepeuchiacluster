@@ -2,7 +2,7 @@
 
 from .auth import require_role
 from .contracts import ExecutionResult, Principal, Problem, canonical, fields, identifier, new_id, sha256, timestamp
-from .demo import FakeCoordinator
+from .capabilities import CapabilityCoordinator, DEMO, SPECS
 
 
 SYSTEM = Principal("local-system", "system")
@@ -11,7 +11,7 @@ SYSTEM = Principal("local-system", "system")
 class ExecutionManager:
     def __init__(self, service, coordinator=None):
         self.service = service
-        self.coordinator = FakeCoordinator() if coordinator is None else coordinator
+        self.coordinator = CapabilityCoordinator() if coordinator is None else coordinator
 
     def recover(self):
         with self.service.store.transaction() as con:
@@ -40,8 +40,11 @@ class ExecutionManager:
             workers = tuple(self.service.registry.list(con, active_only=True))
             plan = self.coordinator.plan(self.service._view(con, mission), workers)
             fields(plan, ("schema", "simulated", "role", "capability", "worker_id", "instruction", "outputs"))
-            if (plan["schema"] != "pepeuch.control-plane/plan/v1" or plan["simulated"] is not True
-                    or plan["role"] != "demo-report" or plan["instruction"] != "produce_deterministic_report"
+            capability = self.service._required_capability(con, identity)
+            expected = SPECS[capability]
+            if (plan["schema"] != "pepeuch.control-plane/plan/v1"
+                    or plan["capability"] != capability
+                    or any(plan[key] != value or type(plan[key]) is not type(value) for key, value in expected.items())
                     or plan["outputs"] != ["resultat.md"]
                     or not any(w["id"] == plan["worker_id"] and plan["capability"] in w["capabilities"] for w in workers)):
                 raise Problem("invalid_plan", 409)
@@ -104,7 +107,7 @@ class ExecutionManager:
             con.execute("UPDATE tasks SET state='running' WHERE id=?", (task["id"],))
             self.service._transition(con, principal, mission, "running")
             self.service._audit(con, principal, mission["workspace_id"], mission["id"], "attempt_started", {"attempt_id": identity, "task_id": task["id"], "worker_id": principal.identity})
-            task_view = {"schema": "pepeuch.control-plane/task/v1", **dict(task), "state": "running", "simulated": True}
+            task_view = {"schema": "pepeuch.control-plane/task/v1", **dict(task), "state": "running", "simulated": SPECS[task["capability"]]["simulated"]}
             task_view.pop("plan")
             return {"request": {"schema": "pepeuch.control-plane/execution-request/v1", "attempt_id": identity,
                                 "generation": generation, "task": task_view,
@@ -123,7 +126,7 @@ class ExecutionManager:
         content_hash = sha256(canonical(result.to_dict()).encode())
         with self.service.store.transaction() as con:
             self.service.registry.authorize(con, principal)
-            attempt = con.execute("SELECT a.*,t.mission_id FROM attempts a JOIN tasks t ON t.id=a.task_id WHERE a.id=? AND a.worker_id=?", (identity, principal.identity)).fetchone()
+            attempt = con.execute("SELECT a.*,t.mission_id,t.capability FROM attempts a JOIN tasks t ON t.id=a.task_id WHERE a.id=? AND a.worker_id=?", (identity, principal.identity)).fetchone()
             if attempt is None:
                 raise Problem("not_found", 404)
             if attempt["generation"] != result.generation:
@@ -151,8 +154,10 @@ class ExecutionManager:
                     raise Problem("workspace_not_ready", 503)
                 publisher.publish_result(con, principal, mission, attempt, result.outputs[0])
             else:
-                expected_error = {"failed": "simulated_failure", "interrupted": "simulated_interruption", "cancelled": None}[result.status]
-                if result.outputs or result.error_code != expected_error:
+                errors = ({"failed": {"simulated_failure"}, "interrupted": {"simulated_interruption"}, "cancelled": {None}}
+                          if attempt["capability"] == DEMO else
+                          {"failed": {"cpu_execution_failed"}, "interrupted": {"cpu_interrupted", "cpu_deadline_exceeded"}, "cancelled": {None}})
+                if result.outputs or result.error_code not in errors[result.status]:
                     raise Problem("invalid_failure_result")
             if self.service.clock() >= attempt["deadline"]:
                 raise Problem("stale_attempt", 409)
@@ -169,8 +174,11 @@ class ExecutionManager:
             for worker in self.service.registry.list(con):
                 active = con.execute("SELECT COUNT(*) FROM attempts WHERE worker_id=? AND state IN ('running','cancel_requested')", (worker["id"],)).fetchone()[0]
                 verified = con.execute("SELECT COUNT(*) FROM results r JOIN attempts a ON a.id=r.attempt_id WHERE a.worker_id=?", (worker["id"],)).fetchone()[0]
-                result.append({**worker, "state": "revoked" if worker["status"] == "revoked" else "simulated_busy" if active else "manual_idle",
-                               "verified_simulated_executions": verified, "online_verified": False})
+                entry = {**worker, "state": "revoked" if worker["status"] == "revoked" else ("simulated_busy" if worker["simulated"] else "cpu_busy") if active else "manual_idle",
+                         "verified_simulated_executions": verified if worker["simulated"] else 0, "online_verified": False}
+                if not worker["simulated"]:
+                    entry["accepted_cpu_results"] = verified
+                result.append(entry)
         return result
 
     def state(self, principal, identity):

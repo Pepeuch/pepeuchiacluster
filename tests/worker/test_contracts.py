@@ -27,7 +27,8 @@ class Contracts(unittest.TestCase):
                 configuration(data)
 
     def test_endpoints_are_loopback_only_without_credentials(self):
-        for endpoint in ("https://provider.test", "http://user@127.0.0.1:8765", "http://localhost:8765", "http://127.0.0.1:8765?key=x"):
+        for endpoint in ("https://provider.test", "http://user@127.0.0.1:8765", "http://localhost:8765", "http://127.0.0.1:8765?key=x",
+                         "http://127.0.0.1:8765\n", "http://127.0.0.1:8765/#", "http://127.0.0.1:0", "http://127.0.0.1:65536"):
             data = config()
             data["backend_url"] = endpoint
             with self.assertRaises(Problem):

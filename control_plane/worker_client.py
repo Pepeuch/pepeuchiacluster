@@ -9,6 +9,7 @@ from uuid import uuid4
 from .contracts import Executor, Problem, canonical, decode_json, fields, identifier, text
 from .demo import FakeWorker
 from .http_io import DeadlineSocket
+from .capabilities import DEMO, SPECS
 
 
 class LocalConnection(HTTPConnection):
@@ -95,7 +96,7 @@ class WorkerRunner:
         return result.status
 
 
-def validate_request(request):
+def validate_request(request, *, capabilities=(DEMO,)):
     fields(request, ("schema", "attempt_id", "generation", "task", "mission", "authorized_files", "started_at", "deadline", "expected_version"))
     task, mission = request["task"], request["mission"]
     fields(task, ("schema", "id", "mission_id", "role", "capability", "worker_id", "state", "simulated"))
@@ -105,10 +106,14 @@ def validate_request(request):
     text(mission["title"], 160)
     text(mission["objective"], 4000)
     worker = task["worker_id"]
+    capability = task["capability"]
+    if not isinstance(capability, str) or capability not in capabilities or capability not in SPECS:
+        raise Problem("invalid_worker_response")
+    spec = SPECS[capability]
     if (request["schema"] != "pepeuch.control-plane/execution-request/v1"
-            or task["schema"] != "pepeuch.control-plane/task/v1" or task["role"] != "demo-report"
-            or task["capability"] != "demo.report.v1" or task["state"] != "running"
-            or task["simulated"] is not True or task["mission_id"] != mission["id"]
+            or task["schema"] != "pepeuch.control-plane/task/v1" or task["role"] != spec["role"]
+            or task["state"] != "running"
+            or task["simulated"] is not spec["simulated"] or task["mission_id"] != mission["id"]
             or not isinstance(worker, str) or worker != "fake-cpu" and re.fullmatch(r"n_[0-9a-f]{32}", worker) is None):
         raise Problem("invalid_worker_response")
     refs = request["authorized_files"]

@@ -1,6 +1,7 @@
 """B5.3 independent worker policy and evidence, separate from API credentials."""
 
 from dataclasses import asdict, dataclass
+from copy import deepcopy
 from urllib.parse import urlsplit
 import re
 
@@ -24,6 +25,8 @@ def configuration(data):
     if data["schema"] != CONFIG_SCHEMA or not isinstance(data["worker_id"], str) or re.fullmatch(r"n_[0-9a-f]{32}", data["worker_id"]) is None:
         raise Problem("invalid_worker_configuration")
     try:
+        if not isinstance(data["backend_url"], str) or re.fullmatch(r"http://127\.0\.0\.1:[0-9]{1,5}", data["backend_url"]) is None:
+            raise ValueError()
         endpoint = urlsplit(data["backend_url"])
         if (endpoint.scheme != "http" or endpoint.hostname != "127.0.0.1" or not endpoint.port
                 or endpoint.username is not None or endpoint.password is not None
@@ -43,7 +46,7 @@ def configuration(data):
         raise Problem("unsupported_os_profile")
     for name in ("expected_uid", "expected_gid", "backend_uid"):
         integer(profile[name], 0, 2 ** 31 - 1)
-    return data
+    return deepcopy(data)
 
 
 @dataclass(frozen=True)

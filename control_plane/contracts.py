@@ -179,7 +179,7 @@ class ExecutionResult(Contract):
             raise Problem("invalid_result_state")
         if not isinstance(data["outputs"], list) or len(data["outputs"]) > 1:
             raise Problem("invalid_outputs")
-        if data["error_code"] is not None and (not isinstance(data["error_code"], str) or data["error_code"] not in {"simulated_failure", "simulated_interruption"}):
+        if data["error_code"] is not None and (not isinstance(data["error_code"], str) or data["error_code"] not in {"simulated_failure", "simulated_interruption", "cpu_execution_failed", "cpu_interrupted", "cpu_deadline_exceeded"}):
             raise Problem("invalid_error_code")
         return cls(**{key: value for key, value in data.items() if key != "schema"})
 

@@ -13,6 +13,7 @@ import sqlite3
 
 from .contracts import Principal, Problem, canonical, decode_json, fields, identifier, new_id, sha256, timestamp
 from .storage import private_directory, write_new
+from .capabilities import CPU_DIGEST, DEMO
 
 
 def worker_id(value):
@@ -29,7 +30,7 @@ def default_limits(settings):
 
 
 def policy(capabilities, limits, settings):
-    if capabilities != ["demo.report.v1"]:
+    if capabilities not in ([DEMO], [CPU_DIGEST]):
         raise Problem("unsupported_worker_capabilities")
     fields(limits, ("max_concurrent_tasks", "lease_seconds", "max_output_bytes"))
     if (any(type(value) is not int for value in limits.values()) or limits["max_concurrent_tasks"] != 1
@@ -40,11 +41,13 @@ def policy(capabilities, limits, settings):
 
 
 def public_worker(row):
+    simulated = decode_json(row["capabilities"]) == [DEMO]
     return {"schema": "pepeuch.control-plane/worker-identity/v1", "id": row["id"], "status": row["status"],
             "credential_epoch": row["credential_epoch"], "capabilities": decode_json(row["capabilities"]),
-            "limits": decode_json(row["limits"]), "capacity": 1, "simulated": True,
+            "limits": decode_json(row["limits"]), "capacity": 1, "simulated": simulated,
             "hardware_verified": False, "gpu": None,
-            "isolation": {"mode": "same_os_account", "enforced": False}}
+            "isolation": ({"mode": "same_os_account", "enforced": False} if simulated else
+                          {"mode": "independent_worker", "declared": "linux-systemd-cpu/v1", "enforced": None, "verified": False})}
 
 
 def authenticate_worker(root, credential):

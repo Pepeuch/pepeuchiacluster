@@ -11,6 +11,7 @@ from .contracts import (
     canonical, decode_json, fields, identifier, new_id, operation_id, sha256, text, timestamp,
 )
 from .storage import Store
+from .capabilities import CPU_DIGEST, DEMO, SPECS
 
 
 class ControlPlane:
@@ -46,7 +47,13 @@ class ControlPlane:
                          row["state"], row["created_at"], decode_json(row["authorized_files"]),
                          {"input": "local_user", "execution": "simulation_only"}).to_dict()
         tasks = con.execute("SELECT * FROM tasks WHERE mission_id=?", (row["id"],)).fetchall()
-        result["tasks"] = [Task(*(t[key] for key in ("id", "mission_id", "role", "capability", "worker_id", "state"))).to_dict() for t in tasks]
+        result["tasks"] = [Task(*(t[key] for key in ("id", "mission_id", "role", "capability", "worker_id", "state")),
+                                simulated=SPECS[t["capability"]]["simulated"]).to_dict() for t in tasks]
+        capability = self._required_capability(con, row["id"])
+        if capability != DEMO:
+            result["required_capability"] = capability
+            result["provenance"] = {"input": "local_user", "execution": "deterministic_cpu", "ai_inference": False,
+                                    "os_isolation": "NOT VERIFIED"}
         result["plan"] = None if not tasks else decode_json(tasks[0]["plan"])
         attempts = con.execute("SELECT a.* FROM attempts a JOIN tasks t ON t.id=a.task_id WHERE t.mission_id=? ORDER BY a.number", (row["id"],)).fetchall()
         result["attempts"] = [Attempt(*(a[key] for key in ("id", "task_id", "number", "worker_id", "state", "started_at", "deadline", "error_code"))).to_dict() for a in attempts]
@@ -54,8 +61,18 @@ class ControlPlane:
         result["results"] = [{**dict(r), "provenance": decode_json(r["provenance"])} for r in results]
         return result
 
+    def _required_capability(self, con, identity):
+        # Immutable versioned intent, in the existing append-only audit ledger.
+        # Absence means the historical demo contract; never infer from text/names.
+        rows = con.execute("SELECT details FROM events WHERE mission_id=? AND type='mission_execution_contract_v1'", (identity,)).fetchall()
+        if not rows:
+            return DEMO
+        if len(rows) != 1 or decode_json(rows[0][0]) != {"capability": CPU_DIGEST}:
+            raise Problem("invalid_mission_contract", 409)
+        return CPU_DIGEST
+
     def _audit(self, con, principal, workspace_id, mission_id, event_type, details):
-        allowed = {"state", "reason", "file_id", "version_id", "task_id", "attempt_id", "worker_id"}
+        allowed = {"state", "reason", "file_id", "version_id", "task_id", "attempt_id", "worker_id", "capability"}
         if set(details) - allowed:
             raise Problem("unsafe_audit_details", 500)
         con.execute("INSERT INTO events(id,mission_id,workspace_id,actor,at,type,details) VALUES (?,?,?,?,?,?,?)",
@@ -95,6 +112,12 @@ class ControlPlane:
             return [WorkspaceReference(r["id"], r["project"]).to_dict() for r in con.execute("SELECT * FROM workspaces WHERE owner=?", (principal.identity,))]
 
     def create_mission(self, principal, data):
+        return self._create_mission(principal, data, DEMO)
+
+    def create_cpu_mission(self, principal, data):
+        return self._create_mission(principal, data, CPU_DIGEST)
+
+    def _create_mission(self, principal, data, capability):
         fields(data, ("operation_id", "title", "objective", "workspace_id"), ("authorized_files",))
         title, objective = text(data["title"], 160), text(data["objective"], 4000)
         identifier(data["workspace_id"])
@@ -105,6 +128,8 @@ class ControlPlane:
             identifier(reference)
         if len(refs) != len(set(refs)):
             raise Problem("invalid_file_references")
+        if capability == CPU_DIGEST and refs:
+            raise Problem("unsupported_cpu_inputs")
         def effect(con):
             workspace = workspace_access(con, principal, data["workspace_id"])
             for reference in refs:
@@ -113,8 +138,11 @@ class ControlPlane:
             identity = new_id("m")
             con.execute("INSERT INTO missions VALUES (?,?,?,?,?,?,?,?,?)", (identity, principal.identity, workspace["project"], workspace["id"], title, objective, "draft", timestamp(self.clock()), canonical(refs)))
             self._audit(con, principal, workspace["id"], identity, "mission_created", {"state": "draft"})
+            if capability != DEMO:
+                self._audit(con, principal, workspace["id"], identity, "mission_execution_contract_v1", {"capability": capability})
             return self._view(con, self._mission(con, principal, identity))
-        return self._operate(principal, data["operation_id"], "create_mission", data, effect)
+        action = "create_mission" if capability == DEMO else "create_cpu_mission"
+        return self._operate(principal, data["operation_id"], action, data, effect)
 
     def get_mission(self, principal, identity):
         require_role(principal, "admin")
@@ -141,9 +169,18 @@ class ControlPlane:
         with self.store.transaction() as con:
             counts = {row["state"]: row["count"] for row in con.execute("SELECT state,COUNT(*) AS count FROM missions WHERE owner=? GROUP BY state", (principal.identity,))}
             active = con.execute("SELECT id,title,state FROM missions WHERE owner=? AND state IN ('running','cancel_requested') LIMIT 1", (principal.identity,)).fetchone()
+            active = None if active is None else dict(active)
+            if active is not None and self._required_capability(con, active["id"]) != DEMO:
+                active["required_capability"] = CPU_DIGEST
+            cpu_present = con.execute("SELECT 1 FROM events e JOIN missions m ON m.id=e.mission_id WHERE m.owner=? AND e.type='mission_execution_contract_v1' LIMIT 1", (principal.identity,)).fetchone() is not None
         return {"mission_count": sum(counts.values()), "queued_tasks": counts.get("queued", 0),
-                "completed_tasks": counts.get("completed", 0), "active_mission": None if active is None else dict(active),
-                "nodes": self.execution.nodes(principal), "simulation_only": True}
+                "completed_tasks": counts.get("completed", 0), "active_mission": active,
+                "nodes": self.execution.nodes(principal), "simulation_only": not cpu_present}
+
+    def simulation_only(self, principal):
+        require_role(principal, "admin")
+        with self.store.transaction() as con:
+            return con.execute("SELECT 1 FROM events e JOIN missions m ON m.id=e.mission_id WHERE m.owner=? AND e.type='mission_execution_contract_v1' LIMIT 1", (principal.identity,)).fetchone() is None
 
     def revoke_worker(self, principal, identity, data):
         fields(data, ("operation_id",))
