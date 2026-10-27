@@ -102,29 +102,39 @@ OpenAI / Mistral / autres providers
 
 ## À adapter à la v2
 
-- [ ] Réorganiser le repository selon la nouvelle architecture
-- [ ] Déplacer les anciens fichiers utiles
-- [ ] Archiver les prototypes devenus obsolètes
-- [ ] Mettre à jour README et architecture
-- [ ] Remplacer l'ancienne TODO par cette TODO v4
+- [x] Réorganiser le repository selon la nouvelle architecture
+- [x] Déplacer les anciens fichiers utiles
+- [x] Archiver les prototypes devenus obsolètes
+- [x] Mettre à jour README et architecture
+- [x] Remplacer l'ancienne TODO par cette TODO v4
 
 ---
 
 # Phase 1 — Infrastructure minimale du serveur
 
 - [ ] Créer la VM via le script Proxmox
-- [ ] Vérifier réseau / stockage / SSH
+- [x] Vérifier réseau / stockage / SSH
 - [ ] Passer la RTX A2000 en passthrough
 - [ ] Vérifier `lspci`
 - [ ] Installer le driver NVIDIA
 - [ ] Vérifier `nvidia-smi`
 - [ ] Installer NVIDIA Container Toolkit
 - [ ] Vérifier le GPU depuis Docker
-- [ ] Installer / valider Docker Compose
-- [ ] Créer `/opt/pepeuch-ai`
+- [x] Installer / valider Docker Compose
+- [x] Créer `/opt/pepeuch-ai`
 - [ ] Définir volumes persistants
 - [ ] Définir sauvegarde de la VM
 - [ ] Ajouter healthchecks de base
+
+**Checkpoint VM 150 — 27 octobre 2026**
+
+- [x] Recycler manuellement la VM 150 en nœud `pepeuchai` (Debian 13 minimal) ; le script de création Proxmox reste à valider séparément.
+- [x] Installer Docker Engine 29.9.2, Compose v5.6.1 ; `hello-world` réussi, service actif et activé au démarrage.
+- [x] Préparer `/opt/pepeuch-ai/{repo,config,data,logs,backups}`.
+- [x] Créer le volume Docker `pepeuch-ai-poc_postgres_data` et confirmer la persistance d'une donnée après redémarrage de PostgreSQL.
+- [ ] Définir et vérifier une sauvegarde/restauration Proxmox de la VM 150 avant d'y stocker des données irremplaçables.
+- [ ] Vérifier les healthchecks de l'ensemble des services (le healthcheck PostgreSQL est configuré, mais son état `healthy` n'a pas encore été confirmé).
+- [ ] Reprendre le passthrough RTX A2000 : échec VFIO/FLR (`stuck in D3`), validation GPU dans la VM reportée ; ne pas bloquer le POC CPU.
 
 **Jalon :** un conteneur Docker peut utiliser correctement l'A2000.
 
@@ -133,6 +143,16 @@ OpenAI / Mistral / autres providers
 # Phase 2 — Choix et POC de la base de données
 
 Objectif : choisir le moteur de données avant de figer le schéma.
+
+**Checkpoint expérimental — 27 octobre 2026**
+
+- [x] Démarrer PostgreSQL 16.15 (`postgres:16-alpine`) via Compose, sur un réseau interne sans port publié.
+- [x] Valider la connexion SQL, l'écriture et la lecture après redémarrage du conteneur.
+- [x] Préparer le schéma `poc.external_models` et l'importeur TOML → SQL/COPY avec provenance Git ; 2 tests unitaires réussis sur Debian 13.
+- [x] Analyser les 405 TOML du submodule épinglé : 405 fichiers analysés, aucune erreur.
+- [ ] Vérifier la génération intégrale du flux SQL et importer réellement les 405 fiches dans PostgreSQL.
+- [ ] Vérifier le volume après recréation du conteneur, puis sauvegarde **et restauration** dans une base de test.
+- [ ] Réaliser le POC SurrealDB et comparer sur les mêmes données/requêtes ; aucune décision de moteur à ce stade.
 
 - [ ] Faire un POC **PostgreSQL vs SurrealDB**
 - [ ] Importer un échantillon réel de `models.dev`
@@ -182,15 +202,16 @@ Objectif : exploiter les catalogues existants au lieu de reconstruire leur trava
 
 ## 3.1 models.dev — source seed principale
 
-- [ ] Ajouter `anomalyco/models.dev` comme **git submodule**
-- [ ] Épingler un commit précis
+- [x] Ajouter `anomalyco/models.dev` comme **git submodule**
+- [x] Épingler un commit précis (`5e9fdbc3d88cb831627a93dc1362cc10773c176c`)
 - [ ] Enregistrer le SHA de source lors des imports
 - [ ] Exploiter prioritairement :
   - `models.json`
   - `catalog.json`
   - fichiers TOML `models/`
   - fichiers TOML `providers/`
-- [ ] Créer un adapter/importer dédié
+- [ ] Créer un adapter/importer générique et indépendant du moteur de base de données
+- [x] Préparer un importeur POC PostgreSQL (CSV/COPY + JSONB), testé hors base ; import réel encore à valider
 - [ ] Ne jamais faire dépendre le selector directement de leur format
 - [ ] Détecter les deltas lors des mises à jour du submodule
 - [ ] Conserver licence, provider, prix, contexte, modalités, reasoning, tool calling, structured output, open weights et liens vers poids/benchmarks
