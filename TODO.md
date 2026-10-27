@@ -198,7 +198,15 @@ reste à développer ; ces validations portent sur des sondes et imports manuels
 - [x] Migrer CSGHub/MoArk avec équivalence des requêtes et fixtures ; préparer l'interface SDK ModelScope sans réimplémenter son protocole ni importer le SDK au démarrage.
 - [x] Valider 138 tests, les sept références B3.3 et les sorties des trois CLI B3 ; imports PG/SurrealDB générés identiques à B3.3, sans accès base.
 - [ ] Décider et tester la politique de redirections B1 avant sa migration ; préserver le cas NIM 404 et les limites du SDK. Voir [TRANSPORT_B42.md](database/poc/TRANSPORT_B42.md).
-- [ ] Préparer le registre explicite des sept sources, sans collecte ni dépendance optionnelle au démarrage.
+- [x] Préparer l'interface du registre explicite des sept sources, sans collecte ni dépendance optionnelle au démarrage.
+
+**Préparation B4.3 — 27 octobre 2026 (SourceSpec à examiner)**
+
+- [x] Proposer SourceSpec/TransportSpec et une table déclarative des sept sources ; aucun binding CLI, chargement de plugin ou moteur de collecte.
+- [x] Tester les types, sélections, révisions, capacités, immutabilité et absence de chargement de SDK/adaptateur/réseau à l'import ; 146 tests au total.
+- [x] Documenter les limites réelles B1/SDK et les frontières Discovery Cache / fournisseurs d'inférence / Personal Model Catalog ; voir [SOURCE_SPEC_B43.md](database/poc/SOURCE_SPEC_B43.md).
+- [ ] Examiner le prototype et décider multitag NIM, namespaces domaines/comptes, provenance synthétique/réelle et conventions de collecte partielle avant un registre opérationnel.
+- [ ] Concevoir ensuite un binding manuel sur fixtures ; budgets, retry, checkpoints et collecte planifiée restent hors de cette préparation.
 
 ---
 

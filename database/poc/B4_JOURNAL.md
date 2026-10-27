@@ -68,7 +68,39 @@ Aucune modification préexistante sans rapport n'a été déplacée ou effacée.
   SDK non soumis au transport urllib ; migration B1 différée car sa politique de
   redirect actuelle diffère. Aucun endpoint réel interrogé et aucune base ouverte.
 
+## Préparation B4.3 — SourceSpec (27 octobre 2026)
+
+- Ajouts : `source_spec_design.py`, `test_source_spec_design.py`,
+  `SOURCE_SPEC_B43.md`. Prototype de dataclasses et table statique des sept sources,
+  sans collecteur, plugin, génération d'identité B2 ou liaison aux CLI.
+- Huit tests de conception : conformité aux namespaces/types/scopes B4.0,
+  nature/validation des révisions, absence de promesse d'inférence, limitations
+  SDK/B1 explicites, index/collections gelés et imports inertes en interpréteur neuf.
+- Le prototype ne prétend pas que B1 applique une allowlist, que les SDK ont un
+  timeout commun ou que le type inference_endpoint est une preuve d'accès réel.
+- **146 tests réussis**, références B3.3 inchangées et `git diff --check` propre.
+  Aucun SDK optionnel chargé par le prototype, aucun réseau et aucune base ouverts.
+- Décisions différées : multitag NIM, isolation domaines/comptes, convention
+  synthétique/réel, accès/visibilité, succès partiels, redirects B1 et garanties SDK.
+  Le futur binding collecteur/registre doit faire l'objet d'une revue séparée.
+
+## Revue finale
+
+- Les 11 fichiers de tests historiques (91 cas) sont identiques au commit B3.3.
+  Les signatures des fonctions publiques et les déclarations d'options CLI
+  existantes ont été comparées par AST : aucune modification.
+- Références littérales et SHA256 du JSON B4.0 inchangés. Les seules évolutions
+  intentionnelles sont les copies défensives, le rejet d'entrées dangereuses ou
+  ambiguës et les diagnostics plus sûrs ; aucun changement de payload valide.
+- Scan ciblé de motifs de credentials et revue des sentinelles de tests : aucun
+  vrai secret détecté. Les données d'authentification des tests sont explicitement
+  synthétiques, sans jeton utilisable.
+- Suite complète finale en mode verbose : **146/146 tests réussis** ;
+  `git diff --check` propre. Commits locaux séparés par lot ; aucun push.
+- Aucune requête fournisseur, inférence, GPU, base, migration ou planification
+  exécutée. La branche B3.3 de référence et `main` ne sont pas modifiées.
+
 ## Travaux suivants
 
-B4.3 : conception d'un registre explicite et tests de conception.
+Revoir SourceSpec puis préparer un binding manuel sur fixtures, sans automatisation.
 Pas de scheduler ni modification du Personal Model Catalog.
