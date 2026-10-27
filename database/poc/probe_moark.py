@@ -13,9 +13,10 @@ import json
 from pathlib import Path
 import sys
 from urllib.error import HTTPError
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import build_opener
 
 from discovery_cache import make_snapshot, validate_snapshot
+from metadata_http import HTTPPolicy, NoRedirect as _NoRedirect, UrllibTransport, get_metadata_json
 from moark_adapter import API_BASE, CATALOG_URL, model_id, select_moark_model
 
 
@@ -23,24 +24,11 @@ DEFAULT_MODEL = "Qwen3-8B"
 MAX_METADATA_BYTES = 2_000_000
 
 
-class _NoRedirect(HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
-
-
 def read_online(requested_id: str) -> dict:
     model_id(requested_id)  # Reject invalid selections before any network I/O.
-    request = Request(CATALOG_URL, headers={
-        "Accept": "application/json", "User-Agent": "Pepeuch-AI-Discovery-POC/0.1",
-    }, method="GET")
-    with build_opener(_NoRedirect()).open(request, timeout=20) as response:
-        payload = response.read(MAX_METADATA_BYTES + 1)
-    if len(payload) > MAX_METADATA_BYTES:
-        raise ValueError("MoArk metadata response exceeded size limit")
-    data = strict_json_loads(payload)
-    if not isinstance(data, dict):
-        raise ValueError("MoArk roster must be an object")
-    return data
+    return get_metadata_json(CATALOG_URL, policy=HTTPPolicy(
+        frozenset({"moark.ai"}), MAX_METADATA_BYTES, 20,
+    ), transport=UrllibTransport(build_opener(_NoRedirect())))
 
 
 def main() -> int:

@@ -190,7 +190,15 @@ reste à développer ; ces validations portent sur des sondes et imports manuels
 - [x] Copier défensivement SourceRecord, payloads et scopes ; rejeter récursivement les clés de credentials et décoder le JSON sans doublons ni valeurs non finies.
 - [x] Normaliser les diagnostics sans corps d'erreur ni valeur sensible ; préserver le cas NIM 404.
 - [x] Valider 122 tests et toutes les références B3.3 inchangées ; voir [PRIMITIVES_B41.md](database/poc/PRIMITIVES_B41.md).
-- [ ] Préparer le transport borné injectable sans retry, puis la conception du registre explicite, sans scheduler ni nouvelle collecte automatique.
+- [x] Préparer le transport borné injectable sans retry et l'interface SDK, sans scheduler ni nouvelle collecte automatique.
+
+**Checkpoint B4.2 — 27 octobre 2026 (transport borné préparé et partiellement intégré)**
+
+- [x] Ajouter le client HTTP GET injectable : limites, timeout, allowlist HTTPS, refus des redirections, erreurs sûres et JSON strict ; aucun retry.
+- [x] Migrer CSGHub/MoArk avec équivalence des requêtes et fixtures ; préparer l'interface SDK ModelScope sans réimplémenter son protocole ni importer le SDK au démarrage.
+- [x] Valider 138 tests, les sept références B3.3 et les sorties des trois CLI B3 ; imports PG/SurrealDB générés identiques à B3.3, sans accès base.
+- [ ] Décider et tester la politique de redirections B1 avant sa migration ; préserver le cas NIM 404 et les limites du SDK. Voir [TRANSPORT_B42.md](database/poc/TRANSPORT_B42.md).
+- [ ] Préparer le registre explicite des sept sources, sans collecte ni dépendance optionnelle au démarrage.
 
 ---
 

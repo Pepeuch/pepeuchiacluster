@@ -17,6 +17,7 @@ import sys
 
 from discovery_cache import make_snapshot
 from modelscope_adapter import normalize_modelscope_repo
+from metadata_sdk import read_model_repository
 
 
 DEFAULT_ID = "Qwen/Qwen3-0.6B"
@@ -27,13 +28,9 @@ def read_online(model_id: str, endpoint: str) -> dict:
     # Do not import the SDK for offline contract tests or read-only fixtures.
     from modelscope_hub import HubApi
 
-    info = HubApi(endpoint=endpoint).get_repo(model_id, repo_type="model")
     # Official RepoInfo.to_dict preserves source metadata. We do not request
     # file listings or a mutable 'revision' (get_repo ignores that argument).
-    result = info.to_dict()
-    if not isinstance(result, dict):
-        raise ValueError("ModelScope SDK returned an invalid RepoInfo payload")
-    return result
+    return read_model_repository(HubApi(endpoint=endpoint), model_id)
 
 
 def main() -> int:

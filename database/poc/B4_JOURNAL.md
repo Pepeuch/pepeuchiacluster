@@ -46,8 +46,29 @@ Aucune modification préexistante sans rapport n'a été déplacée ou effacée.
   règles métier. La détection par clés ne promet pas d'identifier des secrets
   arbitraires dans du texte libre. Accès, domaines/comptes et NIM restent ouverts.
 
+## B4.2 — transport commun (27 octobre 2026)
+
+- Ajouts : `metadata_http.py`, `metadata_sdk.py`, `test_metadata_http.py` et
+  `TRANSPORT_B42.md`. Politiques explicites, transport injectable, un GET borné,
+  refus de redirect/auth dans URL, parsing strict, erreurs nettoyées sans retry.
+- Migration des seules sondes CSGHub et MoArk dont les contraintes communes
+  ont une équivalence testée ; les 29 tests historiques de ces sources restent
+  inchangés. ModelScope délègue son unique appel SDK à l'interface injectable ;
+  son import optionnel reste tardif. B1 conserve son transport historique.
+- 16 nouveaux tests : succès, syntaxe/ambiguïté/secret JSON, limite exacte et
+  dépassement, timeout direct/enveloppé, redirect, 401/403/404/429/500/503,
+  absence de retry, URL refusée avant I/O, fermeture et SDK simulé.
+- Un test supposait que HTTPError(fp=None) ne crée pas de stream ; urllib crée
+  un buffer vide. L'attendu a été précisé : aucun octet de corps distant conservé,
+  tout en préservant la compatibilité HTTPError. Pas de changement métier associé.
+- **138 tests réussis**, `git diff --check` propre. Comparaison indépendante aux
+  CLI B3.3 archivées : trois sorties fixture identiques hors date d'observation ;
+  les deux imports générés sont identiques octet pour octet. Références B4.0 intactes.
+- Limites documentées : timeout socket ≠ deadline totale ; allowlist ≠ DNS pinning ;
+  SDK non soumis au transport urllib ; migration B1 différée car sa politique de
+  redirect actuelle diffère. Aucun endpoint réel interrogé et aucune base ouverte.
+
 ## Travaux suivants
 
-B4.2 : client HTTP borné injectable sans retry et interface SDK ; B4.3 :
-conception d'un registre explicite.
+B4.3 : conception d'un registre explicite et tests de conception.
 Pas de scheduler ni modification du Personal Model Catalog.
