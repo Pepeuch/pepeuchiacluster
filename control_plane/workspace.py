@@ -6,7 +6,7 @@ import os
 import re
 
 from .auth import require_role, workspace_access
-from .contracts import Problem, fields, identifier, new_id, sha256, timestamp
+from .contracts import Problem, decode_json, fields, identifier, new_id, sha256, timestamp
 from .storage import private_directory, read_private, write_new
 
 
@@ -109,7 +109,9 @@ class WorkspaceManager:
         require_role(principal, "worker")
         if principal.identity != attempt["worker_id"]:
             raise Problem("access_denied", 403)
-        name, raw = output_data(output, min(65536, self.service.store.settings.max_file_bytes))
+        worker = self.service.registry.authorize(con, principal)
+        limit = decode_json(worker["limits"])["max_output_bytes"]
+        name, raw = output_data(output, min(65536, self.service.store.settings.max_file_bytes, limit))
         if name != "resultat.md" or output["expected_version"] != attempt["expected_version"]:
             raise Problem("result_contract_mismatch", 409)
         published = self._publish(con, principal, mission["workspace_id"], name, raw, attempt["expected_version"],

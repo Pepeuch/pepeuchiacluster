@@ -15,11 +15,13 @@ from .storage import Store
 
 class ControlPlane:
     def __init__(self, root, *, clock=time.time, settings=None, coordinator=None):
-        self.store = Store(root, settings=settings)
+        self.store = Store(root, settings=settings, clock=clock)
         self.clock = clock
         from .execution import ExecutionManager
         from .workspace import WorkspaceManager
+        from .worker_registry import WorkerRegistry
         try:
+            self.registry = WorkerRegistry(self.store, clock)
             self.workspace = WorkspaceManager(self)
             self.execution = ExecutionManager(self, coordinator)
             self.execution.recover()
@@ -74,13 +76,17 @@ class ControlPlane:
         operation_id(operation)
         request_hash = sha256(canonical({"action": action, "payload": payload}).encode())
         with self.store.transaction() as con:
-            old = con.execute("SELECT * FROM operations WHERE actor=? AND id=?", (principal.identity, operation)).fetchone()
+            actor = principal.identity
+            if role == "worker":
+                self.registry.authorize(con, principal)
+                actor = principal.identity + "@" + str(principal.credential_epoch)
+            old = con.execute("SELECT * FROM operations WHERE actor=? AND id=?", (actor, operation)).fetchone()
             if old is not None:
                 if old["request_sha256"] != request_hash:
                     raise Problem("operation_conflict", 409)
                 return decode_json(old["response"])
             response = effect(con)
-            con.execute("INSERT INTO operations VALUES (?,?,?,?)", (principal.identity, operation, request_hash, canonical(response)))
+            con.execute("INSERT INTO operations VALUES (?,?,?,?)", (actor, operation, request_hash, canonical(response)))
             return response
 
     def workspaces(self, principal):
@@ -138,3 +144,13 @@ class ControlPlane:
         return {"mission_count": sum(counts.values()), "queued_tasks": counts.get("queued", 0),
                 "completed_tasks": counts.get("completed", 0), "active_mission": None if active is None else dict(active),
                 "nodes": self.execution.nodes(principal), "simulation_only": True}
+
+    def revoke_worker(self, principal, identity, data):
+        fields(data, ("operation_id",))
+        def effect(con):
+            public = self.registry.revoke(con, identity)
+            self.execution._fence(con, "worker_revoked", expired_only=False, worker_id=identity)
+            workspace = con.execute("SELECT id FROM workspaces WHERE owner=? LIMIT 1", (principal.identity,)).fetchone()
+            self._audit(con, principal, workspace["id"], None, "worker_revoked", {"worker_id": identity})
+            return public
+        return self._operate(principal, data["operation_id"], "revoke_worker:" + identity, data, effect)

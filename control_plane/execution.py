@@ -2,7 +2,7 @@
 
 from .auth import require_role
 from .contracts import ExecutionResult, Principal, Problem, canonical, fields, identifier, new_id, sha256, timestamp
-from .demo import FakeCoordinator, WORKERS
+from .demo import FakeCoordinator
 
 
 SYSTEM = Principal("local-system", "system")
@@ -12,14 +12,13 @@ class ExecutionManager:
     def __init__(self, service, coordinator=None):
         self.service = service
         self.coordinator = FakeCoordinator() if coordinator is None else coordinator
-        self.workers = WORKERS
 
     def recover(self):
         with self.service.store.transaction() as con:
             self._fence(con, "backend_restart", expired_only=False)
 
-    def _fence(self, con, reason, *, expired_only):
-        rows = con.execute("SELECT a.id,a.task_id,a.deadline,t.mission_id FROM attempts a JOIN tasks t ON t.id=a.task_id WHERE a.state IN ('running','cancel_requested')").fetchall()
+    def _fence(self, con, reason, *, expired_only, worker_id=None):
+        rows = con.execute("SELECT a.id,a.task_id,a.deadline,t.mission_id FROM attempts a JOIN tasks t ON t.id=a.task_id WHERE a.state IN ('running','cancel_requested') AND (? IS NULL OR a.worker_id=?)", (worker_id, worker_id)).fetchall()
         for row in rows:
             if expired_only and row["deadline"] > self.service.clock():
                 continue
@@ -38,12 +37,13 @@ class ExecutionManager:
             mission = self.service._mission(con, principal, identity)
             if mission["state"] != "draft":
                 raise Problem("invalid_transition", 409)
-            plan = self.coordinator.plan(self.service._view(con, mission), self.workers)
+            workers = tuple(self.service.registry.list(con, active_only=True))
+            plan = self.coordinator.plan(self.service._view(con, mission), workers)
             fields(plan, ("schema", "simulated", "role", "capability", "worker_id", "instruction", "outputs"))
             if (plan["schema"] != "pepeuch.control-plane/plan/v1" or plan["simulated"] is not True
                     or plan["role"] != "demo-report" or plan["instruction"] != "produce_deterministic_report"
                     or plan["outputs"] != ["resultat.md"]
-                    or not any(w["id"] == plan["worker_id"] and plan["capability"] in w["capabilities"] for w in self.workers)):
+                    or not any(w["id"] == plan["worker_id"] and plan["capability"] in w["capabilities"] for w in workers)):
                 raise Problem("invalid_plan", 409)
             mission = self.service._transition(con, principal, mission, "approved")
             con.execute("INSERT INTO tasks VALUES (?,?,?,?,?,?,?)", (new_id("t"), identity, plan["role"], plan["capability"], plan["worker_id"], "queued", canonical(plan)))
@@ -82,9 +82,8 @@ class ExecutionManager:
     def claim(self, principal, data):
         require_role(principal, "worker")
         fields(data, ("operation_id",))
-        if principal.identity not in {w["id"] for w in self.workers}:
-            raise Problem("access_denied", 403)
         def effect(con):
+            worker = self.service.registry.authorize(con, principal)
             self._fence(con, "attempt_expired", expired_only=True)
             if con.execute("SELECT 1 FROM attempts WHERE worker_id=? AND state IN ('running','cancel_requested')", (principal.identity,)).fetchone():
                 return {"request": None}
@@ -97,8 +96,11 @@ class ExecutionManager:
             identity, generation = new_id("a"), new_id("g")
             number = con.execute("SELECT COALESCE(MAX(number),0)+1 FROM attempts WHERE task_id=?", (task["id"],)).fetchone()[0]
             now = self.service.clock()
-            started, deadline = timestamp(now), now + self.service.store.settings.attempt_seconds
+            from .contracts import decode_json
+            limits = decode_json(worker["limits"])
+            started, deadline = timestamp(now), now + min(self.service.store.settings.attempt_seconds, limits["lease_seconds"])
             con.execute("INSERT INTO attempts VALUES (?,?,?,?,?,?,?,?,?,?,?)", (identity, task["id"], number, principal.identity, "running", generation, started, deadline, expected, None, None))
+            con.execute("INSERT INTO attempt_worker_epochs VALUES (?,?)", (identity, principal.credential_epoch))
             con.execute("UPDATE tasks SET state='running' WHERE id=?", (task["id"],))
             self.service._transition(con, principal, mission, "running")
             self.service._audit(con, principal, mission["workspace_id"], mission["id"], "attempt_started", {"attempt_id": identity, "task_id": task["id"], "worker_id": principal.identity})
@@ -120,10 +122,14 @@ class ExecutionManager:
         self.expire()
         content_hash = sha256(canonical(result.to_dict()).encode())
         with self.service.store.transaction() as con:
+            self.service.registry.authorize(con, principal)
             attempt = con.execute("SELECT a.*,t.mission_id FROM attempts a JOIN tasks t ON t.id=a.task_id WHERE a.id=? AND a.worker_id=?", (identity, principal.identity)).fetchone()
             if attempt is None:
                 raise Problem("not_found", 404)
             if attempt["generation"] != result.generation:
+                raise Problem("stale_attempt", 409)
+            epoch = con.execute("SELECT credential_epoch FROM attempt_worker_epochs WHERE attempt_id=?", (identity,)).fetchone()
+            if epoch is None or epoch[0] != principal.credential_epoch:
                 raise Problem("stale_attempt", 409)
             if attempt["result_sha256"] is not None:
                 if attempt["result_sha256"] != content_hash:
@@ -159,17 +165,24 @@ class ExecutionManager:
         require_role(principal, "admin")
         self.expire()
         with self.service.store.transaction() as con:
-            active = con.execute("SELECT COUNT(*) FROM attempts WHERE state IN ('running','cancel_requested')").fetchone()[0]
-            verified = con.execute("SELECT COUNT(*) FROM results").fetchone()[0]
-        return [{**worker, "state": "simulated_busy" if active else "manual_idle",
-                 "verified_simulated_executions": verified, "online_verified": False} for worker in self.workers]
+            result = []
+            for worker in self.service.registry.list(con):
+                active = con.execute("SELECT COUNT(*) FROM attempts WHERE worker_id=? AND state IN ('running','cancel_requested')", (worker["id"],)).fetchone()[0]
+                verified = con.execute("SELECT COUNT(*) FROM results r JOIN attempts a ON a.id=r.attempt_id WHERE a.worker_id=?", (worker["id"],)).fetchone()[0]
+                result.append({**worker, "state": "revoked" if worker["status"] == "revoked" else "simulated_busy" if active else "manual_idle",
+                               "verified_simulated_executions": verified, "online_verified": False})
+        return result
 
     def state(self, principal, identity):
         require_role(principal, "worker")
         identifier(identity)
         self.expire()
         with self.service.store.transaction() as con:
+            self.service.registry.authorize(con, principal)
             row = con.execute("SELECT state,deadline FROM attempts WHERE id=? AND worker_id=?", (identity, principal.identity)).fetchone()
             if row is None:
                 raise Problem("not_found", 404)
+            epoch = con.execute("SELECT credential_epoch FROM attempt_worker_epochs WHERE attempt_id=?", (identity,)).fetchone()
+            if epoch is None or epoch[0] != principal.credential_epoch:
+                raise Problem("stale_attempt", 409)
             return {"schema": "pepeuch.control-plane/attempt-state/v1", **dict(row)}

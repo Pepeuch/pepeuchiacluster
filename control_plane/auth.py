@@ -8,13 +8,14 @@ from .storage import read_private
 
 
 ADMIN = Principal("local-admin", "admin")
-WORKER = Principal("fake-cpu", "worker")
+WORKER = Principal("fake-cpu", "worker", 1)
 
 
 class Authenticator:
     def __init__(self, root):
+        self.root = root
         self.credentials = []
-        for role, principal in (("admin", ADMIN), ("worker", WORKER)):
+        for role, principal in (("admin", ADMIN),):
             token = read_private(root / "secrets" / (role + ".token"), 256).strip()
             if re.fullmatch(rb"[A-Za-z0-9_-]{43}", token) is None:
                 raise Problem("invalid_local_credential", 500)
@@ -27,12 +28,15 @@ class Authenticator:
             token = authorization[7:].encode("ascii")
         except UnicodeError:
             raise Problem("authentication_required", 401) from None
+        if re.fullmatch(rb"[A-Za-z0-9_-]{43}", token) is None:
+            raise Problem("authentication_required", 401)
         found = None
         for expected, principal in self.credentials:
             if hmac.compare_digest(token, expected):
                 found = principal
         if found is None:
-            raise Problem("authentication_required", 401)
+            from .worker_registry import authenticate_worker
+            return authenticate_worker(self.root, token)
         return found
 
 

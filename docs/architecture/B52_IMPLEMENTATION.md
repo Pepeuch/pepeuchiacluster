@@ -63,3 +63,48 @@ Limites bornées : index 256 Mio, manifeste 4 Mio, au plus 10 003 fichiers décr
 et 2 Gio de contenu. Les backups dépassant le format/les limites sont refusés.
 Rétention sans purge. Les workers d'un registre restauré seront révoqués avant
 acceptation ; un réenrôlement explicite est requis dans le lot identité.
+
+## B5.2c — identités, révocation et politiques bornées
+
+IMPLÉMENTÉ : registre `worker-identity/v1`, IDs stables locaux au backend, statut
+active/revoked, version monotone de credential, SHA256 du credential à haute
+entropie (pas sa valeur), capacités et limites fermées. Chaque tentative est liée
+à la version de credential lors de son attribution. Secrets nouveaux écrits dans
+des fichiers privés immuables, fsync avant commit, jamais dans les réponses HTTP.
+
+Migration **applicative** `0002.sql` : tables additives, association des anciennes
+tentatives à l'epoch 1 et préservation des opérations idempotentes worker B5.1.
+Le SQL `0001.sql`, IDs et DTO d'exécution v1 restent inchangés ; le champ d'epoch
+est interne au principal/registre. Aucun changement du Discovery Cache ou des POC.
+
+Authentification worker relue à chaque requête et autorisation revérifiée dans
+la transaction métier **avant tout replay de réponse idempotente**. Une révocation
+interrompt les tentatives en cours de ce worker, bloque les nouvelles et refuse
+les résultats anciens. Une opération qui a déjà commit avant la révocation reste
+un résultat valide : ordre déterminé par la transaction SQLite, pas une préemption.
+Les tâches déjà en file restent affectées et non exécutables tant que cette
+identité n'est pas réactivée ; l'utilisateur peut les annuler explicitement.
+
+API ajoutées, admin seulement : `GET /api/v1/workers` (métadonnées publiques,
+aucune clé/empreinte de credential/chemin hôte) et
+`POST /api/v1/workers/{id}/revoke` avec `operation_id`. L'interface affiche le
+statut révoqué et ne présente plus une identité révoquée comme prête.
+
+Enrôlement/rotation : **CLI locale hors ligne**, même verrou que le backend,
+autorité du propriétaire du répertoire. L'ancien fichier n'est ni écrasé ni
+réutilisé ; un nouveau fichier d'epoch est créé sous `secrets/workers/`. Les noms
+de fichiers sont publics, les valeurs ne sont jamais imprimées. Une identité
+révoquée exige `--reactivate` et une nouvelle clé pour revenir active. Une
+interruption de maintenance peut laisser une clé non référencée : refus fermé,
+examen manuel du fichier, aucune confiance ni suppression automatique.
+
+Seule capacité autorisée : `demo.report.v1`. Limites appliquées : une tâche active,
+deadline au plus celle du backend et sortie au plus 64 Kio/configuration locale.
+Capacité shell/GPU, RAM/CPU prétendument limités et champs inconnus refusés.
+`isolation.enforced=false` : aucune isolation OS promise. Voir l'étude indépendante
+[WORKER_ISOLATION_B52.md](WORKER_ISOLATION_B52.md).
+
+TESTÉ : 116 tests cumulés (+15), couvrant refus d'anciennes clés/principaux,
+révocation en cours, cache d'opération, accès entre deux workers enrôlés, rotation
+CLI refusée sur backend actif, politique de sortie/deadline, migration B5.1 et
+registre restauré révoqué après redémarrage. Les 341 tests initiaux sont conservés.

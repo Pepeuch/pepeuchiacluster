@@ -53,6 +53,11 @@ class API:
             return Response(self.service.dashboard(principal))
         if method == "GET" and path == "/api/v1/nodes":
             return Response({"nodes": self.service.execution.nodes(principal)})
+        if method == "GET" and path == "/api/v1/workers":
+            return Response({"workers": self.service.registry.list()})
+        matched = re.fullmatch(r"/api/v1/workers/(fake-cpu|n_[0-9a-f]{32})/revoke", path)
+        if method == "POST" and matched:
+            return Response(self.service.revoke_worker(principal, matched[1], data))
         matched = re.fullmatch(r"/api/v1/workspaces/([a-z]_[0-9a-f]{32})/files", path)
         if matched:
             if method == "GET":
