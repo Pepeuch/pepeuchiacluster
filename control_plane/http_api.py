@@ -31,7 +31,11 @@ class API:
             return Response(self.service.execution.claim(principal, data))
         matched = re.fullmatch(r"/api/v1/execution/([a-z]_[0-9a-f]{32})/finish", path)
         if method == "POST" and matched:
+            require_role(principal, "worker")
             return Response(self.service.execution.finish(principal, matched[1], ExecutionResult.from_dict(data)))
+        matched = re.fullmatch(r"/api/v1/execution/([a-z]_[0-9a-f]{32})/state", path)
+        if method == "GET" and matched:
+            return Response(self.service.execution.state(principal, matched[1]))
         require_role(principal, "admin")
         if method == "GET" and path == "/api/v1/health":
             return Response({"schema": "pepeuch.control-plane/health/v1", "status": "ok", "simulation_only": True})

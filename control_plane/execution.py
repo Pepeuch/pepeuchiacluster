@@ -148,6 +148,8 @@ class ExecutionManager:
                 expected_error = {"failed": "simulated_failure", "interrupted": "simulated_interruption", "cancelled": None}[result.status]
                 if result.outputs or result.error_code != expected_error:
                     raise Problem("invalid_failure_result")
+            if self.service.clock() >= attempt["deadline"]:
+                raise Problem("stale_attempt", 409)
             con.execute("UPDATE attempts SET state=?,result_sha256=?,error_code=? WHERE id=?", (result.status, content_hash, result.error_code, identity))
             con.execute("UPDATE tasks SET state=? WHERE id=?", (result.status, attempt["task_id"]))
             self.service._transition(con, principal, mission, result.status)
@@ -161,3 +163,13 @@ class ExecutionManager:
             verified = con.execute("SELECT COUNT(*) FROM results").fetchone()[0]
         return [{**worker, "state": "simulated_busy" if active else "manual_idle",
                  "verified_simulated_executions": verified, "online_verified": False} for worker in self.workers]
+
+    def state(self, principal, identity):
+        require_role(principal, "worker")
+        identifier(identity)
+        self.expire()
+        with self.service.store.transaction() as con:
+            row = con.execute("SELECT state,deadline FROM attempts WHERE id=? AND worker_id=?", (identity, principal.identity)).fetchone()
+            if row is None:
+                raise Problem("not_found", 404)
+            return {"schema": "pepeuch.control-plane/attempt-state/v1", **dict(row)}

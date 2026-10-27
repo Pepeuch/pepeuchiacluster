@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pepeuch — Control Plane</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div id="login" class="login-shell">
+    <form id="login-form" class="login-card">
+      <div class="mark" aria-hidden="true">P</div>
+      <p class="eyebrow">PEPEUCH AI CLUSTER / B5.1</p>
+      <h1>Votre espace de pilotage.</h1>
+      <p>Créez une mission, suivez une simulation et retrouvez ses fichiers.</p>
+      <label for="credential">Clé d’administration locale</label>
+      <input id="credential" type="password" autocomplete="off" required spellcheck="false">
+      <p class="hint">La clé générée à l’initialisation reste uniquement en mémoire dans cet onglet.</p>
+      <button type="submit">Déverrouiller l’espace</button>
+      <p id="login-error" class="error" role="alert"></p>
+      <span class="pill">SIMULATION · Aucune IA réelle</span>
+    </form>
+  </div>
+  <div id="application" class="app-shell" hidden>
+    <aside class="sidebar">
+      <div class="brand"><span class="mark" aria-hidden="true">P</span><span>pepeuch<span class="brand-sub">AI CLUSTER</span></span></div>
+      <p class="nav-label">VOTRE ESPACE</p>
+      <nav aria-label="Navigation principale">
+        <button data-view="dashboard" aria-current="page">Tableau de bord</button>
+        <button data-view="missions">Missions</button>
+        <button data-view="workspaces">Espaces de travail</button>
+      </nav>
+      <div class="sidebar-foot"><span class="pill">B5.1 · Prototype local</span><p>Aucun modèle ni agent IA.<br>Worker CPU simulé.</p></div>
+    </aside>
+    <main>
+      <header class="topbar"><span>Control Plane <span class="muted">/ Local</span></span><div class="topbar-actions"><span class="connection" id="connection">Connexion…</span><button id="logout" class="quiet">Verrouiller</button></div></header>
+      <p id="notice" role="alert" class="notice" hidden></p>
+      <section id="dashboard-view">
+        <div class="page-heading"><div><p class="eyebrow">VUE D’ENSEMBLE</p><h1>Tableau de bord</h1><p>De l’objectif au livrable, avec une trace à chaque étape.</p></div><button id="new-mission">Nouvelle mission <span aria-hidden="true">＋</span></button></div>
+        <div class="metrics" id="metrics"></div>
+        <div class="dashboard-grid">
+          <article class="card"><div class="card-heading"><h2>Activité en cours</h2><span class="tiny-label">MISSIONS</span></div><div id="active-mission"></div></article>
+          <article class="card"><div class="card-heading"><h2>Worker de démonstration</h2><span class="pill">SIMULÉ</span></div><div id="worker-state"></div></article>
+        </div>
+        <article class="callout"><span class="callout-icon" aria-hidden="true">↳</span><div><h2>Un premier parcours, entièrement local.</h2><p>Le coordinateur et le worker sont simulés. Les missions, les versions et les fichiers produits sont réellement persistants. Aucune inférence ni API de fournisseur.</p></div></article>
+        <article class="card"><div class="card-heading"><h2>Dernières missions</h2><button class="quiet" id="all-missions">Tout voir →</button></div><div id="recent-missions"></div></article>
+      </section>
+      <section id="missions-view" hidden>
+        <div class="page-heading"><div><p class="eyebrow">OBJECTIF → SIMULATION → LIVRABLE</p><h1>Missions</h1><p>Un brouillon n’est exécuté qu’après votre approbation.</p></div><span class="pill">SIMULATION</span></div>
+        <div class="mission-layout">
+          <div class="mission-column">
+            <form id="mission-form" class="card">
+              <h2>Nouvelle mission</h2>
+              <label for="mission-title">Titre</label><input id="mission-title" maxlength="160" required placeholder="Rapport de démonstration">
+              <label for="mission-objective">Objectif</label><textarea id="mission-objective" maxlength="4000" rows="5" required placeholder="Préparer un rapport de démonstration pour mon projet."></textarea>
+              <label for="mission-inputs">Versions de fichiers autorisées <span class="muted">(facultatif)</span></label><select id="mission-inputs" multiple size="2"></select>
+              <p class="hint">La simulation référence ces versions ; elle n’analyse pas leur contenu.</p>
+              <button type="submit">Créer le brouillon</button>
+            </form>
+            <div class="card"><h2>Vos missions</h2><div id="mission-list"></div></div>
+          </div>
+          <article class="card mission-detail" id="mission-detail" aria-live="polite"></article>
+        </div>
+      </section>
+      <section id="workspaces-view" hidden>
+        <div class="page-heading"><div><p class="eyebrow">FICHIERS ET VERSIONS</p><h1>Espace de travail</h1><p>Des fichiers durables, indépendants de chaque tentative.</p></div><span class="pill">Projet local</span></div>
+        <div class="workspace-summary card"><div><h2>Fichiers du projet</h2><p id="quota" class="muted"></p></div><p class="hint">Chaque modification crée une nouvelle version. Aucune suppression automatique.</p></div>
+        <form id="upload-form" class="card upload-form">
+          <div><label for="upload-file">Téléverser un fichier</label><input id="upload-file" type="file" required></div>
+          <div><label for="upload-name">Nom dans l’espace</label><input id="upload-name" required maxlength="120" placeholder="document.txt"></div>
+          <button type="submit">Ajouter une version</button>
+          <p class="hint">Noms simples : lettres, chiffres, points, tirets. Le quota inclut les anciennes versions.</p>
+        </form>
+        <div id="workspace-files"></div>
+      </section>
+      <footer>Pepeuch AI Cluster · B5.1 · Exécution simulée, fichiers persistants.</footer>
+    </main>
+  </div>
+</body>
+</html>

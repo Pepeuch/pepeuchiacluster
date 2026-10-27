@@ -233,3 +233,19 @@ class Workspaces(unittest.TestCase):
         self.assertEqual(sum(isinstance(result, dict) for result in outcomes), 1)
         self.assertIn("version_conflict", outcomes)
         self.assertEqual(len(self.app.workspace.list_files(ADMIN, self.workspace)["files"][0]["versions"]), 2)
+
+    def test_attempt_expiring_during_publication_is_not_completed(self):
+        request = self.request()
+        original = self.app.workspace._object
+        def slow_storage(raw):
+            identity = original(raw)
+            self.app.clock = lambda: request["deadline"]
+            return identity
+        with patch.object(self.app.workspace, "_object", side_effect=slow_storage):
+            with self.assertRaises(Problem) as error:
+                self.finish(request)
+        self.assertEqual(error.exception.code, "stale_attempt")
+        mission = self.app.get_mission(ADMIN, request["mission"]["id"])
+        self.assertEqual(mission["state"], "interrupted")
+        self.assertEqual(mission["results"], [])
+        self.assertEqual(self.app.workspace.list_files(ADMIN, self.workspace)["files"], [])

@@ -252,6 +252,17 @@ reste à développer ; ces validations portent sur des sondes et imports manuels
 
 ---
 
+**Checkpoint B5.1 — 27 octobre 2026 (prototype local, exécution simulée)**
+
+- [x] Développer sur `feat/webui-control-plane-b51` depuis `main` / `a4cb141`, trois merges vérifiés ; commits locaux seulement.
+- [x] B5.1a : API versionnée loopback, identité locale contrôlée, rôles admin/worker distincts, missions et audit SQLite séparés, migration explicite, idempotence et permissions propriétaire/projet.
+- [x] B5.1b : approbation explicite, plan et tâche, capacité déclarée de démonstration, worker séparé, tentatives bornées, annulation, expiration, résultats tardifs et reprise manuelle ; aucune IA réelle.
+- [x] B5.1c : fichiers versionnés immuables, staging/intégrité/publication durable, upload/download bornés, quotas et conflits concurrents ; résultat et historique conservés après redémarrage.
+- [x] B5.1d : trois sections WebUI responsive, formulaire et brouillon, confirmation d'envoi, suivi, fichiers autorisés et livrables ; ressources locales, pas de cookies/CDN.
+- [x] Valider 69 tests B5.1 et un parcours Firefox complet, worker séparé et redémarrage inclus ; conserver les 272 tests Discovery Cache sans modification. Voir [B51_IMPLEMENTATION.md](docs/architecture/B51_IMPLEMENTATION.md).
+- [ ] Avant B5.2 : choisir une pile HTTP durcie, identité/révocation, sauvegarde/restauration réellement éprouvée et isolation OS d'un vrai worker ; le serveur stdlib reste un prototype loopback.
+- [ ] Définir les contrats agents/rôles/baux réels, appairage/TLS et politiques multi-utilisateurs avant une ouverture LAN ou exécution d'outils ; aucune installation, inférence ou collecte réelle dans B5.1.
+
 # Phase 2 — Choix et POC de la base de données
 
 Objectif : choisir le moteur de données avant de figer le schéma.

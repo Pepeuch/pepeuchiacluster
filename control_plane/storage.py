@@ -9,7 +9,7 @@ import secrets
 import sqlite3
 import stat
 
-from .contracts import Problem, canonical, decode_json, new_id, sha256
+from .contracts import Problem, canonical, decode_json, fields, new_id, sha256
 
 
 @dataclass(frozen=True)
@@ -89,7 +89,9 @@ class Store:
             private_directory(root / name)
         if decode_json(read_private(marker, 1024)) != {"format": "pepeuch.control-plane-installation/v1"}:
             raise Problem("unknown_installation")
-        self.settings = Settings(**decode_json(read_private(root / "config" / "settings.json", 1024)))
+        settings_data = decode_json(read_private(root / "config" / "settings.json", 1024))
+        fields(settings_data, ("max_file_bytes", "quota_bytes", "attempt_seconds"))
+        self.settings = Settings(**settings_data)
         if settings is not None and settings != self.settings:
             raise Problem("settings_mismatch")
         self.lock = os.open(root / "app" / "backend.lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)

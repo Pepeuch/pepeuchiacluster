@@ -54,6 +54,10 @@ def fields(data, required, optional=()):
 def text(value, maximum):
     if not isinstance(value, str) or not value.strip() or len(value) > maximum or "\0" in value:
         raise Problem("invalid_text")
+    try:
+        value.encode("utf-8")
+    except UnicodeError:
+        raise Problem("invalid_text") from None
     return value
 
 
