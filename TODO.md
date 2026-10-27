@@ -238,6 +238,18 @@ reste à développer ; ces validations portent sur des sondes et imports manuels
 - [ ] Raccorder les reçus HTTP conditionnels au moteur budgété, la reprise inter-sources et les politiques de fraîcheur avant de déclarer B4.5 opérationnel.
 - [ ] Définir pagination distante, garanties/quotas SDK, concurrence par hôte et budget global dans des lots séparés ; aucun scheduler.
 
+**Étude B5.0 — 27 octobre 2026 (branche documentaire indépendante)**
+
+- [x] Partir de B4.4 publié `8ce3a8a23eecf4813c467e01c0c67d08b1eb839d` ; aucun code B4.5 fusionné, aucun push B5.
+- [x] Proposer backend autonome, UI minimale libre, conversation distincte du coordinateur, contrats de rôles/selector/scheduler/runtime/worker et progression avant premier agent ; voir [WEBUI_CONTROL_PLANE.md](docs/architecture/WEBUI_CONTROL_PLANE.md).
+- [x] Étudier les sources officielles Open WebUI/AnythingLLM : restriction de marque Open WebUI 0.6.6+, code AnythingLLM MIT mais conditions Desktop distinctes ; API optionnelles recommandées, aucun fork ; voir [OPEN_WEBUI_ANYTHINGLLM_STUDY.md](docs/architecture/OPEN_WEBUI_ANYTHINGLLM_STUDY.md).
+- [x] Comparer VM serveur Proxmox, compagnon Windows/macOS/Linux volontaire et USB disque/live ; définir appairage, LAN non fiable, inventaire, consentement et limites de partage ; voir [NODE_PROVISIONING_DESIGN.md](docs/architecture/NODE_PROVISIONING_DESIGN.md).
+- [x] Définir workspace durable, transferts, versions, permissions, reprise et archives indépendants du conteneur/worker ; voir [WORKSPACE_MANAGER_DESIGN.md](docs/architecture/WORKSPACE_MANAGER_DESIGN.md).
+- [ ] Valider les contrats d'identité/appairage/bail et l'API de mission avant B5.1 ; développer un faux worker puis autoriser séparément un pilote Linux CPU.
+- [ ] Choisir langage/packaging, stockage durable et politique de clés ; vérifier licences/artefacts exacts, notamment Desktop avant toute redistribution.
+- [ ] Établir une matrice réellement testée par OS/runtime ; aucune capacité GPU/inférence/agent annoncée comme vérifiée par cette étude.
+- [ ] Garder interfaces tierces, VM automatisée, compagnon multi-OS et USB dans des lots séparés ; aucune installation/provisionnement/migration effectués dans B5.0.
+
 ---
 
 # Phase 2 — Choix et POC de la base de données
