@@ -380,8 +380,11 @@ class RecoveryB45Tests(unittest.TestCase):
         report = execute_sources([good, bad], runtime=b44.FakeClock().runtime())
         self.assertEqual([r.status for r in report.results], [Status.SUCCESS, Status.FAILED])
         self.assertEqual(report.results[1].reason.value, "validated_cache_required")
-        first = save_checkpoint(self.directory, self.entry)
-        self.assertEqual(load_checkpoint(self.directory, self.request, first), self.entry)
+        observed = report.results[0].snapshot
+        request = self.request_for(observed)
+        entry = make_cache(request, observed, self.provenance_for(observed), validators=VALIDATORS)
+        first = save_checkpoint(self.directory, entry)
+        self.assertEqual(load_checkpoint(self.directory, request, first), entry)
         self.assertIsNone(report.results[1].snapshot)
 
 

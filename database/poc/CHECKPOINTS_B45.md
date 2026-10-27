@@ -71,6 +71,11 @@ payloads B2. Le gestionnaire futur devra assigner ces partitions à partir de la
 configuration de confiance ; aucun domaine n'est découvert ou autorisé ici.
 Ordre des IDs dans le scope et valeurs inconnues restent inchangés.
 
+La barrière récursive B4.1 de clés sensibles est conservée pour tous les documents.
+Elle ne détecte pas un secret arbitrairement dissimulé dans du texte libre ; les
+alias et validateurs doivent être publics et fournis par un appelant de confiance.
+Aucune valeur d'authentification n'est attendue dans ces contrats ou leurs logs.
+
 `reuse_not_modified` exige une entrée complète et revalidée, la même requête
 canonique (source, scope, ressources, contexte, révisions), et au moins un validateur
 conditionnel envoyé correspondant exactement à l'entrée. Le résultat explicite

@@ -241,10 +241,12 @@ Aucune modification préexistante sans rapport n'a été déplacée ou effacée.
   B4.5 n'est pas annoncé comme service opérationnel complet. Aucun réseau
   fournisseur, import base, poids, inférence, GPU, scheduler ou push B4.5/B5.
 
-Revoir le registre manuel sur fixtures avant toute extension online. Décisions
-de provenance synthétique/réelle, domaines/comptes, NIM multitag et succès partiels
-toujours ouvertes. Les retries B4.4 existent uniquement dans l'API d'exécution
+Revoir le registre manuel sur fixtures avant toute extension online. Politiques
+opérationnelles de provenance, gestion des domaines/comptes, NIM multitag et
+orchestration des succès partiels toujours ouvertes. Les retries B4.4 existent
+uniquement dans l'API d'exécution
 injectée ; aucun retry implicite n'a été ajouté aux CLI historiques ou au client HTTP.
-B4.5 : cache lié au scope exact, checkpoints atomiques, rétention/reprise après
-arrêt, sélection dynamique et garanties des SDK avant budgets de requêtes physiques.
+Les primitives B4.5 de cache/checkpoints sont validées ci-dessus ; restent leur
+raccordement, la fraîcheur, les clés, la sélection dynamique et les garanties SDK
+avant budgets de requêtes physiques.
 Pas de scheduler ni modification du Personal Model Catalog.
