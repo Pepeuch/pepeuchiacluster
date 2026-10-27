@@ -18,7 +18,9 @@ class ControlPlane:
         self.store = Store(root, settings=settings)
         self.clock = clock
         from .execution import ExecutionManager
+        from .workspace import WorkspaceManager
         try:
+            self.workspace = WorkspaceManager(self)
             self.execution = ExecutionManager(self, coordinator)
             self.execution.recover()
         except BaseException:

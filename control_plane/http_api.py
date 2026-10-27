@@ -46,6 +46,18 @@ class API:
             return Response(self.service.dashboard(principal))
         if method == "GET" and path == "/api/v1/nodes":
             return Response({"nodes": self.service.execution.nodes(principal)})
+        matched = re.fullmatch(r"/api/v1/workspaces/([a-z]_[0-9a-f]{32})/files", path)
+        if matched:
+            if method == "GET":
+                return Response(self.service.workspace.list_files(principal, matched[1]))
+            if method == "POST":
+                return Response(self.service.workspace.upload(principal, matched[1], data), 201)
+        matched = re.fullmatch(r"/api/v1/workspaces/([a-z]_[0-9a-f]{32})/files/([a-z]_[0-9a-f]{32})(?:/versions/([a-z]_[0-9a-f]{32}))?/download", path)
+        if matched and method == "GET":
+            raw, name, checksum = self.service.workspace.download(principal, *matched.groups())
+            return Response(raw, headers={"Content-Type": "application/octet-stream",
+                                         "Content-Disposition": f'attachment; filename="{name}"',
+                                         "X-Content-SHA256": checksum})
         matched = re.fullmatch(r"/api/v1/missions/([a-z]_[0-9a-f]{32})/(approve|cancel|retry)", path)
         if method == "POST" and matched:
             return Response(getattr(self.service.execution, matched[2])(principal, matched[1], data))

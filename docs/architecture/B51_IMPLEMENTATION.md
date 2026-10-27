@@ -58,3 +58,27 @@ TESTÉ : 30 tests B5.1 cumulés, dont transitions, double approbation/réclamati
 capacité d'une seule tâche active, échec/interruption/annulation, expiration,
 générations, absence de réseau/shell/attente et refus de terminer sans publication.
 La publication durable réussie sera raccordée et testée dans B5.1c.
+
+## B5.1c — objets et workspaces persistants
+
+IMPLÉMENTÉ : upload borné, références logiques fichier/version, SHA256 vérifié,
+versions immuables, téléchargement en pièce jointe, audit et quotas cumulés sur
+toutes les versions. Noms ASCII plats, comparés sans distinction de casse ; refus
+des chemins, noms réservés et caractères de contrôle. Limites par défaut : 1 Mio
+par fichier, 16 Mio par workspace, 100 fichiers et 100 versions par fichier.
+Les fichiers autorisés d'une mission désignent des versions figées, pas un chemin.
+
+La publication crée un temporaire privé, vérifie les octets du staging, fsync le
+fichier, renomme l'objet par son empreinte et fsync le répertoire ; l'index, le
+résultat, l'audit et `completed` sont ensuite commités ensemble dans SQLite.
+Une erreur avant commit laisse les anciennes versions intactes. Un crash peut
+laisser un objet non référencé : il n'est pas visible comme livrable et n'est pas
+supprimé automatiquement. Les résidus staging d'un autre processus sont ignorés.
+La répétition exacte d'une réponse acceptée est acquittée sans nouvelle version.
+
+TESTÉ : 51 tests B5.1 cumulés, avec succès complet puis redémarrage, download et
+SHA identiques, conflit de version, deux uploads réellement concurrents, quota,
+fichier trop grand, staging tronqué, corruption, symlink et interruptions avant
+renommage ou après fsync avant commit. Pas de simulation de coupure électrique.
+La rétention n'est pas une sauvegarde ; la procédure hors ligne sera documentée
+avec les commandes de démonstration dans le dernier lot.
