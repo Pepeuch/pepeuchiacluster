@@ -55,6 +55,37 @@ class ImporterTests(unittest.TestCase):
             self.assertEqual(record["context_tokens"], "")
             self.assertEqual(record["weights_count"], 0)
 
+    def test_pinned_legacy_tool_call(self) -> None:
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            source = root / "models" / "openai" / "old.toml"
+            source.parent.mkdir(parents=True)
+            source.write_text(
+                'name = "Old format"\ntool_call = true\n',
+                encoding="utf-8",
+            )
+            record = dict(zip(COPY_COLUMNS, make_row(root, source, SHA)))
+            self.assertEqual(record["tools_supported"], "true")
+            source.write_text(
+                'name = "Old format"\ntool_call = false\n',
+                encoding="utf-8",
+            )
+            record = dict(zip(COPY_COLUMNS, make_row(root, source, SHA)))
+            self.assertEqual(record["tools_supported"], "false")
+
+    def test_conflicting_tool_capabilities_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            source = root / "models" / "org" / "conflict.toml"
+            source.parent.mkdir(parents=True)
+            source.write_text(
+                'tool_call = true\n[capabilities]\n'
+                'tools = { supported = false }\n',
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "Conflicting models.dev"):
+                make_row(root, source, SHA)
+
 
 if __name__ == "__main__":
     unittest.main()

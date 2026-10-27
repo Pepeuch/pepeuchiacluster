@@ -59,14 +59,19 @@ def _json_default(value: Any) -> str:
 
 
 def _supported_tools(model: dict[str, Any]) -> bool | None:
+    # Older models.dev snapshots (including 5e9fdbc3) store a top-level
+    # tool_call boolean. The newer schema=2 format nests this capability.
+    legacy = model.get("tool_call")
+    if not isinstance(legacy, bool):
+        legacy = None
     caps = model.get("capabilities")
-    if not isinstance(caps, dict):
-        return None
-    tools = caps.get("tools")
-    if not isinstance(tools, dict):
-        return None
-    value = tools.get("supported")
-    return value if isinstance(value, bool) else None
+    tools = caps.get("tools") if isinstance(caps, dict) else None
+    modern = tools.get("supported") if isinstance(tools, dict) else None
+    if not isinstance(modern, bool):
+        modern = None
+    if modern is not None and legacy is not None and modern != legacy:
+        raise ValueError("Conflicting models.dev tool_call and capabilities.tools.supported")
+    return modern if modern is not None else legacy
 
 
 def _bool_csv(value: Any) -> str:
