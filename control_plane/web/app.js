@@ -51,7 +51,11 @@
       if (button.dataset.view === view) button.setAttribute("aria-current", "page"); else button.removeAttribute("aria-current");
     });
   }
-  function status(state) { return node("span", labels[state] || state, "status " + state); }
+  function stateLabel(state, mission) {
+    if (mission?.required_capability === "cpu.text.sha256.v1") return ({running:"En cours · CPU", completed:"Terminée · CPU", failed:"Échec CPU"})[state] || labels[state] || state;
+    return labels[state] || state;
+  }
+  function status(state, mission) { return node("span", stateLabel(state, mission), "status " + state); }
   function empty(target, title, text) { const box = node("div", null, "empty"); box.append(node("strong", title), node("span", text)); target.replaceChildren(box); }
   function missionRows(target, rows) {
     target.replaceChildren();
@@ -60,7 +64,7 @@
       const row = node("div", null, "mission-row"), title = node("button", mission.title);
       title.type = "button"; title.addEventListener("click", () => { selected = mission.id; navigate("missions"); renderDetail().catch((error) => message(error.message)); });
       const info = node("div"); info.append(title, node("small", new Date(mission.created_at).toLocaleString("fr-FR")));
-      row.append(info, status(mission.state)); target.append(row);
+      row.append(info, status(mission.state, mission)); target.append(row);
     }
   }
   function actionButton(label, action, quiet=false) {
@@ -77,11 +81,13 @@
     const mission = await request("/api/v1/missions/" + identity);
     const history = await request("/api/v1/missions/" + identity + "/events");
     if (selected !== identity || !credential) return;
-    target.replaceChildren(node("p", "MISSION", "eyebrow"), node("h2", mission.title), status(mission.state), node("p", mission.id, "identity"), node("h3", "Objectif"), node("p", mission.objective, "objective"));
+    const cpu = mission.required_capability === "cpu.text.sha256.v1";
+    target.replaceChildren(node("p", "MISSION", "eyebrow"), node("h2", mission.title), status(mission.state, mission), node("p", mission.id, "identity"), node("h3", "Objectif"), node("p", mission.objective, "objective"));
+    if (cpu) target.append(node("p", "Calcul d’empreinte CPU · aucune inférence IA · isolation OS non vérifiée.", "hint"));
     const actions = node("div", null, "actions");
-    if (mission.state === "draft") actions.append(actionButton("Confier au coordinateur simulé", async () => { if (confirm("Confirmer l’envoi de cette mission au coordinateur SIMULÉ ? Aucune IA réelle ne sera exécutée.")) await mutate(`/api/v1/missions/${identity}/approve`, {}); }));
+    if (mission.state === "draft") actions.append(actionButton(cpu ? "Approuver le calcul CPU" : "Confier au coordinateur simulé", async () => { if (confirm(cpu ? "Autoriser ce calcul déterministe CPU ? Aucune IA réelle ne sera exécutée." : "Confirmer l’envoi de cette mission au coordinateur SIMULÉ ? Aucune IA réelle ne sera exécutée.")) await mutate(`/api/v1/missions/${identity}/approve`, {}); }));
     if (["draft","queued","running","interrupted"].includes(mission.state)) actions.append(actionButton("Demander l’annulation", async () => { if (confirm("Demander l’annulation de cette mission ?")) await mutate(`/api/v1/missions/${identity}/cancel`, {}); }, true));
-    if (["failed","interrupted"].includes(mission.state)) actions.append(actionButton("Créer une nouvelle tentative", async () => { if (confirm("Autoriser explicitement une nouvelle tentative de simulation ?")) await mutate(`/api/v1/missions/${identity}/retry`, {}); }));
+    if (["failed","interrupted"].includes(mission.state)) actions.append(actionButton("Créer une nouvelle tentative", async () => { if (confirm(cpu ? "Autoriser explicitement une nouvelle tentative de calcul CPU ?" : "Autoriser explicitement une nouvelle tentative de simulation ?")) await mutate(`/api/v1/missions/${identity}/retry`, {}); }));
     target.append(actions);
     target.append(node("h3", "Versions de fichiers autorisées"));
     if (!mission.authorized_files.length) target.append(node("p", "Aucun fichier joint.", "hint"));
@@ -90,12 +96,12 @@
       const version = file?.versions.find((item) => item.id === reference);
       target.append(node("p", file ? `${file.name} · version ${version.number}` : "Version autorisée", "hint"), node("code", reference));
     }
-    if (mission.state === "queued") target.append(node("p", "En attente du worker de démonstration, lancé manuellement.", "hint"));
+    if (mission.state === "queued") target.append(node("p", cpu ? "En attente du worker CPU indépendant, lancé manuellement." : "En attente du worker de démonstration, lancé manuellement.", "hint"));
     if (mission.state === "cancel_requested") target.append(node("p", "La demande est enregistrée. L’arrêt sera confirmé par le worker ou la tentative sera interrompue à expiration.", "hint"));
     if (mission.plan) {
-      target.append(node("h3", "Plan du coordinateur · SIMULATION"));
+      target.append(node("h3", cpu ? "Plan déterministe · CPU" : "Plan du coordinateur · SIMULATION"));
       const description = node("dl");
-      for (const [label,value] of [["Rôle demandé",mission.plan.role],["Capacité déclarée",mission.plan.capability],["Worker sélectionné",mission.plan.worker_id],["Exécution vérifiée",mission.state === "completed" ? "Démonstration déterministe uniquement" : "Pas de résultat validé"]]) description.append(node("dt", label), node("dd", value));
+      for (const [label,value] of [["Rôle demandé",mission.plan.role],["Capacité déclarée",mission.plan.capability],["Worker sélectionné",mission.plan.worker_id],["Résultat",mission.state === "completed" ? cpu ? "Résultat CPU publié · isolation OS non vérifiée" : "Démonstration déterministe uniquement" : "Pas de résultat validé"]]) description.append(node("dt", label), node("dd", value));
       target.append(description);
     }
     target.append(node("h3", "Livrables"));
@@ -103,12 +109,12 @@
     for (const result of mission.results) target.append(actionButton("Télécharger resultat.md", () => download(result.file_id, result.version_id, "resultat.md"), true));
     if (mission.attempts.length) {
       target.append(node("h3", "Tentatives"));
-      for (const attempt of mission.attempts) target.append(node("p", `#${attempt.number} · ${labels[attempt.state] || attempt.state}${attempt.error_code ? " · " + attempt.error_code : ""}`, "hint"), node("code", attempt.id));
+      for (const attempt of mission.attempts) target.append(node("p", `#${attempt.number} · ${stateLabel(attempt.state, mission)}${attempt.error_code ? " · " + attempt.error_code : ""}`, "hint"), node("code", attempt.id));
     }
     target.append(node("h3", "Historique"));
     for (const event of history.events) {
       const row = node("div", null, "event"), info = node("div");
-      const description = event.details.state ? `${labels[event.details.state]} · ${event.details.state}` : event.type === "file_published" ? "Fichier durable publié" : event.type === "attempt_started" ? "Tentative attribuée au worker simulé" : event.type;
+      const description = event.details.state ? `${stateLabel(event.details.state, mission)} · ${event.details.state}` : event.type === "file_published" ? "Fichier durable publié" : event.type === "attempt_started" ? cpu ? "Tentative attribuée au worker CPU" : "Tentative attribuée au worker simulé" : event.type;
       info.append(node("span", description), node("small", event.actor));
       row.append(node("time", new Date(event.at).toLocaleTimeString("fr-FR")), info); target.append(row);
     }
@@ -142,7 +148,7 @@
       $("connection").textContent = "Backend local connecté";
       $("metrics").replaceChildren();
       for (const [label,value,hint] of [["Missions",dashboard.mission_count,"brouillons inclus"],["Tâches en attente",dashboard.queued_tasks,"approbation enregistrée"],["Tâches terminées",dashboard.completed_tasks,"livrables persistants"]]) { const metric = node("div", null, "metric"); metric.append(node("span",label,"metric-label"),node("strong",value),node("span",hint)); $("metrics").append(metric); }
-      if (dashboard.active_mission) { $("active-mission").replaceChildren(node("p",dashboard.active_mission.title),status(dashboard.active_mission.state)); } else empty($("active-mission"),"Aucune mission en cours.","Les brouillons restent en attente de votre décision.");
+      if (dashboard.active_mission) { $("active-mission").replaceChildren(node("p",dashboard.active_mission.title),status(dashboard.active_mission.state, dashboard.active_mission)); } else empty($("active-mission"),"Aucune mission en cours.","Les brouillons restent en attente de votre décision.");
       const worker = dashboard.nodes.find((item) => item.status === "active") || dashboard.nodes[0]; $("worker-state").replaceChildren(node("p",worker.id),node("p",worker.state === "revoked" ? "Worker révoqué · aucun travail autorisé." : worker.state === "simulated_busy" ? "Une tentative de simulation est active." : "Démarrage manuel · aucune présence en ligne déduite."),node("p",`${worker.verified_simulated_executions} simulation(s) publiée(s) · matériel non validé`,"hint"));
       missionRows($("recent-missions"), missions.slice(0, 5)); missionRows($("mission-list"), missions); renderFiles(); await renderDetail();
     } catch (error) { $("connection").textContent = "Backend indisponible"; message(error.message || "Connexion interrompue. Vos données restent conservées."); }

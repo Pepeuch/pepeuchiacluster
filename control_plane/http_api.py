@@ -40,12 +40,15 @@ class API:
             return Response(self.service.execution.state(principal, matched[1]))
         require_role(principal, "admin")
         if method == "GET" and path == "/api/v1/health":
-            return Response({"schema": "pepeuch.control-plane/health/v1", "status": "ok", "simulation_only": True})
+            return Response({"schema": "pepeuch.control-plane/health/v1", "status": "ok",
+                             "simulation_only": self.service.simulation_only(principal)})
         if path == "/api/v1/missions":
             if method == "GET":
                 return Response({"missions": self.service.list_missions(principal)})
             if method == "POST":
                 return Response(self.service.create_mission(principal, data), 201)
+        if method == "POST" and path == "/api/v1/cpu-missions":
+            return Response(self.service.create_cpu_mission(principal, data), 201)
         if method == "GET" and path == "/api/v1/workspaces":
             return Response({"workspaces": self.service.workspaces(principal)})
         if method == "GET" and path == "/api/v1/dashboard":

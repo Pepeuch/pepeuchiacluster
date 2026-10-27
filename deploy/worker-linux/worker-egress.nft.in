@@ -1,0 +1,11 @@
+# Candidate only: NOT VERIFIED. Never load without separate firewall authorization.
+# Render numeric dedicated non-root UID and backend port; review existing rules.
+# This affects ALL sockets of that UID, not only this service. Never reuse an UID.
+# Atomic create fails if this exact table already exists; no global flush/replace.
+define worker_uid = @WORKER_UID@
+define backend_port = @BACKEND_PORT@
+
+create table inet pepeuch_worker_b53_test
+add chain inet pepeuch_worker_b53_test output { type filter hook output priority 10; policy accept; }
+add rule inet pepeuch_worker_b53_test output meta skuid $worker_uid ip daddr 127.0.0.1 tcp dport $backend_port counter accept
+add rule inet pepeuch_worker_b53_test output meta skuid $worker_uid counter reject

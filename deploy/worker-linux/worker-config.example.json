@@ -1,0 +1,14 @@
+{
+  "schema": "pepeuch.worker/config/v1",
+  "worker_id": "n_00000000000000000000000000000000",
+  "backend_url": "http://127.0.0.1:8765",
+  "capabilities": ["cpu.text.sha256.v1"],
+  "tools": [],
+  "limits": {"input_bytes": 16000, "output_bytes": 65536, "seconds": 30, "tasks": 1},
+  "os_profile": {
+    "schema": "linux-systemd-cpu/v1",
+    "expected_uid": 65534,
+    "expected_gid": 65534,
+    "backend_uid": 65534
+  }
+}
