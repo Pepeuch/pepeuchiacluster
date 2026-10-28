@@ -6,6 +6,9 @@ conditional request; this module cannot prove that a request actually occurred.
 
 from __future__ import annotations
 
+from email.utils import format_datetime, parsedate_to_datetime
+import re
+
 from discovery_cache import digest
 from discovery_provenance import snapshot_copy, validate_provenance, validation_context
 from execution_models import ResourceRef, safe_selection, validate_observation
@@ -27,7 +30,8 @@ def cache_request(source, selection, resources, *, context, revisions):
         raise ValueError("Requested NIM resource differs from selection")
     revisions = copy_metadata(revisions)
     if not isinstance(revisions, dict) or set(revisions) != set(ids) or any(
-        v is not None and (not isinstance(v, str) or not v or len(v) > 256) for v in revisions.values()
+        v is not None and (not isinstance(v, str) or not v.strip() or len(v) > 256
+                          or any(ord(c) < 32 or ord(c) == 127 for c in v)) for v in revisions.values()
     ):
         raise ValueError("Explicit current revision expectations required, including unknowns")
     return {"source": source, "selection": selection, "resources": ids,
@@ -54,8 +58,15 @@ def http_validators(value):
             continue
         if not isinstance(item, str) or not item or len(item) > 256 or any(not 32 <= ord(c) <= 126 for c in item):
             raise ValueError("Bounded public HTTP validator required")
-        if field == "etag" and not (item.startswith('"') and item.endswith('"') or item.startswith('W/"') and item.endswith('"')):
+        if field == "etag" and re.fullmatch(r'(?:W/)?"[\x21\x23-\x7e]*"', item) is None:
             raise ValueError("Quoted HTTP entity tag required")
+        if field == "last_modified":
+            try:
+                date = parsedate_to_datetime(item)
+                if format_datetime(date, usegmt=True) != item:
+                    raise ValueError()
+            except (ValueError, TypeError, OverflowError):
+                raise ValueError("Canonical IMF-fixdate Last-Modified required") from None
     return data
 
 

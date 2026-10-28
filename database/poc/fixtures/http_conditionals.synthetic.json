@@ -1,0 +1,17 @@
+{
+  "origin": "synthetic_fixture_no_provider_request",
+  "cases": {
+    "initial_200": {"status": 200, "payload": {"revision": "synthetic-http-r1", "value": 1}, "validators": {"etag": "\"synthetic-v1\"", "last_modified": null}},
+    "new_200": {"status": 200, "payload": {"revision": "synthetic-http-r2", "value": 2}, "validators": {"etag": "\"synthetic-v2\"", "last_modified": null}},
+    "valid_304": {"status": 304, "payload": null, "validators": {"etag": "\"synthetic-v1\"", "last_modified": null}},
+    "wrong_etag_304": {"status": 304, "payload": null, "validators": {"etag": "\"unrelated\"", "last_modified": null}},
+    "body_on_304": {"status": 304, "payload": {"unexpected": true}, "validators": {"etag": "\"synthetic-v1\"", "last_modified": null}},
+    "last_modified_200": {"status": 200, "payload": {"revision": null, "value": 1}, "validators": {"etag": null, "last_modified": "Tue, 27 Oct 2026 12:00:00 GMT"}},
+    "last_modified_304": {"status": 304, "payload": null, "validators": {"etag": null, "last_modified": "Tue, 27 Oct 2026 12:00:00 GMT"}},
+    "validatorless_200": {"status": 200, "payload": {"revision": "synthetic-http-r1", "value": 1}, "validators": {"etag": null, "last_modified": null}},
+    "validatorless_304": {"status": 304, "payload": null, "validators": {"etag": null, "last_modified": null}},
+    "malformed_revision_200": {"status": 200, "payload": {"revision": "\r\ninvalid", "value": 1}, "validators": {"etag": "\"synthetic-v2\"", "last_modified": null}}
+  },
+  "invalid_etags": ["*", "W/not-quoted", "\"one\",\"two\"", "\"white space\"", "\"one\"suffix\""],
+  "invalid_last_modified": ["not-a-date", "Mon, 27 Oct 2026 12:00:00 GMT", "Tue, 31 Feb 2026 12:00:00 GMT"]
+}
