@@ -1,0 +1,180 @@
+{
+  "engine_version": "3.3.4",
+  "format": "pepeuch-ai.surreal-plan-fixture/v1",
+  "origin": "observed_engine_response_on_synthetic_data",
+  "responses": {
+    "filter": [
+      {
+        "result": {
+          "attributes": {
+            "projections": "<redacted>"
+          },
+          "children": [
+            {
+              "attributes": {
+                "limit": "<redacted>"
+              },
+              "children": [
+                {
+                  "attributes": {
+                    "limit": "<redacted>",
+                    "sort_keys": "<redacted>"
+                  },
+                  "children": [
+                    {
+                      "attributes": {
+                        "access": "<redacted>",
+                        "direction": "<redacted>",
+                        "index": "<redacted>",
+                        "predicate": "<redacted>"
+                      },
+                      "context": "<redacted>",
+                      "metrics": {
+                        "elapsed_ns": 90562,
+                        "output_batches": 1,
+                        "output_rows": 4,
+                        "records_fetched": 0
+                      },
+                      "operator": "IndexScan"
+                    }
+                  ],
+                  "context": "<redacted>",
+                  "metrics": {
+                    "elapsed_ns": 15828,
+                    "output_batches": 1,
+                    "output_rows": 4,
+                    "records_fetched": 0
+                  },
+                  "operator": "SortTopKByKey"
+                }
+              ],
+              "context": "<redacted>",
+              "expressions": [
+                {
+                  "role": "<redacted>",
+                  "sql": "<redacted>"
+                }
+              ],
+              "metrics": {
+                "elapsed_ns": 25331,
+                "output_batches": 1,
+                "output_rows": 4,
+                "records_fetched": 0
+              },
+              "operator": "Limit"
+            }
+          ],
+          "context": "<redacted>",
+          "metrics": {
+            "elapsed_ns": 4452,
+            "output_batches": 1,
+            "output_rows": 4,
+            "records_fetched": 0
+          },
+          "operator": "SelectProject",
+          "total_rows": 4
+        },
+        "status": "OK",
+        "time": "580.361µs",
+        "type": null
+      }
+    ],
+    "vector": [
+      {
+        "result": {
+          "attributes": {
+            "projections": "<redacted>"
+          },
+          "children": [
+            {
+              "attributes": {
+                "limit": "<redacted>"
+              },
+              "children": [
+                {
+                  "attributes": {
+                    "limit": "<redacted>",
+                    "sort_keys": "<redacted>"
+                  },
+                  "children": [
+                    {
+                      "attributes": {
+                        "fields": "<redacted>"
+                      },
+                      "children": [
+                        {
+                          "attributes": {
+                            "direction": "<redacted>",
+                            "table": "<redacted>",
+                            "topk_pushdown": "<redacted>"
+                          },
+                          "context": "<redacted>",
+                          "metrics": {
+                            "elapsed_ns": 104782,
+                            "output_batches": 1,
+                            "output_rows": 30,
+                            "records_fetched": 0
+                          },
+                          "operator": "TableScan"
+                        }
+                      ],
+                      "context": "<redacted>",
+                      "expressions": [
+                        {
+                          "role": "<redacted>",
+                          "sql": "<redacted>"
+                        }
+                      ],
+                      "metrics": {
+                        "elapsed_ns": 56179,
+                        "output_batches": 1,
+                        "output_rows": 30,
+                        "records_fetched": 0
+                      },
+                      "operator": "Compute"
+                    }
+                  ],
+                  "context": "<redacted>",
+                  "metrics": {
+                    "elapsed_ns": 12741,
+                    "output_batches": 1,
+                    "output_rows": 10,
+                    "records_fetched": 0
+                  },
+                  "operator": "SortTopKByKey"
+                }
+              ],
+              "context": "<redacted>",
+              "expressions": [
+                {
+                  "role": "<redacted>",
+                  "sql": "<redacted>"
+                }
+              ],
+              "metrics": {
+                "elapsed_ns": 15923,
+                "output_batches": 1,
+                "output_rows": 10,
+                "records_fetched": 0
+              },
+              "operator": "Limit"
+            }
+          ],
+          "context": "<redacted>",
+          "metrics": {
+            "elapsed_ns": 4628,
+            "output_batches": 1,
+            "output_rows": 10,
+            "records_fetched": 0
+          },
+          "operator": "SelectProject",
+          "total_rows": 10
+        },
+        "status": "OK",
+        "time": "497.879µs",
+        "type": null
+      }
+    ]
+  },
+  "sanitization": "non_control_string_values_redacted"
+}
