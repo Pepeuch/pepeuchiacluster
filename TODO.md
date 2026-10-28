@@ -880,6 +880,23 @@ cancelled
 - [ ] limites thermiques
 - [ ] limites de coût
 
+## 9.1 Contrat durable des missions sur nœuds temporaires
+
+**Priorité haute — prérequis du lot 10.1.** Décomposer les lignes checkpoints,
+retries, pause/reprise et tâches resumable ci-dessus, en réutilisant les primitives
+du Control Plane B5 plutôt qu’en créant un second système de missions.
+
+**Principe : le serveur central H24 possède l’état durable des missions.**
+Les nœuds temporaires conservent leur environnement d’exécution, leurs modèles
+et leur espace de travail ; leurs checkpoints ou résultats en attente de transfert
+restent des copies locales non autoritatives, pas une base de missions indépendante.
+
+- [ ] Définir le protocole de drainage : dès notification d’arrêt/redémarrage, refuser localement les nouvelles affectations et notifier le serveur pour qu’il cesse d’en attribuer ; couvrir les affectations déjà en transit.
+- [ ] Définir les versions, empreintes, états de tentative et accusés de réception durables des checkpoints/résultats ; confirmer leur persistance centrale avant toute libération des ressources locales correspondantes.
+- [ ] Étendre les baux, identifiants idempotents et générations déjà préparés pour refuser les résultats tardifs ou issus d’une ancienne tentative ; prévenir les doubles publications et définir l’idempotence des effets de bord sans promettre une exécution physique unique.
+- [ ] Définir la reprise depuis le dernier checkpoint central confirmé ou la réattribution après expiration du bail ; séparer une mission reprenable d’une tâche nécessitant un redémarrage ou une validation humaine.
+- [ ] Définir la conduite à tenir si le serveur est indisponible : conserver dans l’espace de travail une file de retransmission bornée et protégée, ne pas annoncer un transfert réussi, puis permettre l’extinction à l’échéance ; documenter la perte possible depuis le dernier checkpoint central confirmé.
+
 Priorités initiales :
 
 ```text
@@ -921,6 +938,32 @@ Priorités initiales :
 - [ ] Auto-join
 - [ ] Healthchecks
 - [ ] Gestion node indisponible
+
+## 10.1 Cycle de vie des workers temporaires — priorité haute
+
+**Dépendances :** contrat durable 9.1, Runtime Manager phase 7 et qualification
+de sécurité/isolation phase 15 et B5.3.1. Le travail de conception et les tests
+simulés sont prioritaires ; aucun pilote réel ni service système n’est autorisé
+par cette liste. Réutiliser le superviseur et les contrats workers existants.
+
+- [ ] Étudier la détection Linux des demandes d’extinction et de redémarrage via `systemd-logind`, les signaux de préparation et les mécanismes de supervision ; distinguer l’arrêt du worker, celui du nœud et les arrêts non interceptables.
+- [ ] Étudier les inhibiteurs d’arrêt en mode délai, `InhibitDelayMaxSec` et les délais des unités systemd ; définir un budget d’arrêt global borné, la libération de l’inhibiteur et la fin du superviseur même en cas de panne réseau, blocage du runtime ou absence du modèle IA.
+- [ ] Prévoir un service système indépendant du modèle IA pour piloter détection, drainage et arrêt, avec privilèges minimaux ; documenter son ordre d’arrêt vis-à-vis du réseau, du stockage et du runtime, sans installer de service maintenant.
+- [ ] Arrêter immédiatement l’acceptation de nouvelles tâches ; coordonner le drainage avec le serveur selon 9.1 et traiter les courses entre attribution, demande d’arrêt et expiration du bail.
+- [ ] Prévoir une terminaison coopérative ou une interruption à une frontière sûre propre à chaque runtime ; borner l’attente et prévoir l’arrêt des processus enfants si le délai expire.
+- [ ] Prévoir des checkpoints périodiques et un checkpoint déclenché par arrêt, avec versions d’entrées, progression et intégrité ; mesurer leur coût et leur fréquence sans supposer qu’un état interne de modèle soit toujours sérialisable.
+- [ ] Transmettre checkpoints, résultats et livrables au serveur central ; attendre sa confirmation durable avant libération locale, selon 9.1, sans supprimer les seules copies non confirmées.
+- [ ] Définir la politique d’expiration du délai : préserver au mieux la file locale de retransmission et autoriser l’extinction sans attendre indéfiniment ; ne pas confondre données locales conservées et résultat durablement acquis par le serveur.
+- [ ] Prévoir après redémarrage la reconnexion, le réenregistrement et la réconciliation des baux/tentatives avec le serveur ; reprendre ou retransmettre seulement après décision centrale, sans relancer aveuglément une ancienne affectation.
+- [ ] Tester d’abord sur faux workers l’extinction normale, le redémarrage, la coupure brutale, la perte réseau et l’indisponibilité du serveur ; injecter arrêt pendant checkpoint/transfert, accusé perdu et résultat tardif après réattribution.
+- [ ] Qualifier ensuite ces scénarios sur des workers de test explicitement autorisés, avec délais mesurés, absence de double publication et reprise depuis les seules versions confirmées ; conserver les preuves et les limites par OS/runtime.
+
+**Critère d’acceptation :** l’extinction de l’ordinateur n’est jamais bloquée
+indéfiniment. Un arrêt brutal peut perdre le travail non confirmé ; la mission,
+son historique et sa reprise restent sous l’autorité du serveur H24.
+Référence de l’étude Linux : [inhibiteurs systemd](https://systemd.io/INHIBITOR_LOCKS/).
+Les profils Windows/macOS demanderont une étude distincte ; aucune garantie
+Linux n’est transposée automatiquement aux autres systèmes.
 
 ---
 
@@ -970,6 +1013,24 @@ validation humaine si payant
 ---
 
 # Phase 13 — Agents H24
+
+## 13.1 Étude ECC — agents autonomes et missions longues
+
+Référence à auditer : [affaan-m/ECC](https://github.com/affaan-m/ECC).
+**Priorités :** étude comparative après inventaire du Control Plane ; pilote
+seulement après les contrats 9.1/10.1 et la qualification de sécurité phase 15.
+Cette section planifie une étude, sans adoption, installation ni exécution de hooks.
+
+- [ ] Auditer ECC à un SHA de commit déterminé, en consignant provenance, licence, dépendances et surfaces exécutables ; ne pas traiter sa branche mobile ou ses instructions comme des éléments déjà approuvés.
+- [ ] Étudier les skills et agents spécialisés et leur correspondance avec nos rôles, permissions et workflows ; identifier les éléments portables et les dépendances à un outil ou fournisseur.
+- [ ] Analyser mémoire persistante, cloisonnement par projet/utilisateur, versionnement, confidentialité et rétention ; distinguer mémoire d’assistance et état durable des missions conservé par le serveur central.
+- [ ] Étudier checkpoints, reconstruction de contexte et reprise après interruption ou changement de worker/modèle ; préserver versions d’entrées, provenance et limites de contexte, sans faire de l’historique de conversation la source de vérité.
+- [ ] Auditer hooks, chargement de skills, permissions, accès réseau/fichiers et gestion des secrets ; identifier risques d’injection, d’exfiltration et d’élévation de privilèges avant tout essai.
+- [ ] Comparer explicitement ECC aux fonctions existantes du Control Plane : missions, approbations, plans/tâches, baux, fichiers versionnés, audit et reprise ; produire une matrice réutilisation/manque/redondance sans dupliquer les primitives B5.
+- [ ] Étudier l’exécution autonome de missions longues avec budgets de temps, tokens et coût, limites d’itérations, critères d’arrêt, validations humaines et checkpoints centraux ; conserver un arrêt supervisé indépendant de l’agent.
+- [ ] Définir un protocole comparatif avec et sans ECC sur des tâches de référence : qualité, taux de réussite/reprise, durée, CPU/RAM et consommation de tokens/coût ; distinguer compteurs fournisseur et estimations, et conserver les révisions/configurations testées.
+- [ ] Préparer puis faire autoriser une expérimentation sur un ou deux workers réels de test, après qualification OS, appairage et réseau ; commencer avec données synthétiques et permissions minimales, sans accès implicite à VM150 ou aux infrastructures privées.
+- [ ] Proposer une intégration facultative derrière des contrats/adaptateurs internes, avec solution de remplacement et chemin sans ECC ; rester indépendant de Codex, Claude et des autres fournisseurs de modèles, sans exposer leurs formats propriétaires comme contrat de mission.
 
 ## Fichiers
 
@@ -1150,6 +1211,46 @@ DESTRUCTIVE = validation humaine obligatoire
 - [ ] guide add role
 - [ ] guide add agent
 - [ ] guide add worker
+
+## 17.1 Intégration continue — GitHub Actions
+
+Décomposition des lignes CI/tests ci-dessus, **sans workflow créé ni activé**.
+Livrer progressivement : CI Python et contrôles statiques, intégrations DB
+synthétiques, workflows manuels, puis runner GPU après qualification séparée.
+**Priorité :** socle Python/contrôles avant les prochains lots d’implémentation ;
+intégrations DB après définition de leurs contrats de test ; jobs privilégiés
+et GPU seulement après leurs validations et autorisations spécifiques.
+
+- [ ] Prévoir un socle GitHub Actions sous Python **3.13**, exécutant les cinq suites `discovery`, `control_plane`, `infrastructure`, `isolation` et `worker` via `python3.13 tests/run_suites.py -q` ; conserver l’isolation des processus et les règles de tests documentées dans [tests/README.md](tests/README.md).
+- [ ] Valider les imports sans chargement implicite de SDK ou accès fournisseur, l’équivalence du point d’entrée Discovery centralisé avec la commande historique, les références B2/B3 et l’absence de modification involontaire des fixtures.
+- [ ] Prévoir contrôle Git et espaces (`git diff --check`), propreté de l’arbre après tests, validation de syntaxe/formatage et scan de secrets ; choisir/épingler les outils avant activation, sans reformatage global ni modification des snapshots verbatim pour satisfaire la CI.
+- [ ] Documenter les prérequis et limitations des runners publics : contrôles de preuves privées explicitement indisponibles sans exports, pas d’accès VM150/Proxmox/NAS, pas de GPU garanti et aucune qualification négative OS déduite de tests applicatifs ; publier séparément succès, échecs et tests non exécutés, sans faux résultat ni copie des exports privés.
+- [ ] Préparer des tests d’intégration PostgreSQL/SurrealDB avec versions/digests épinglés, données synthétiques, bases/volumes/réseaux temporaires et limites de ressources ; vérifier requêtes, relations, anti-rejeu et imports incrémentaux sans dépendance aux POC historiques ni aux fichiers privés des campagnes.
+- [ ] Prévoir des workflows **manuels** pour benchmarks et restaurations, avec budgets explicites, destinations nouvelles, contrôle des plans d’exécution et mesures distinctes ; publier uniquement des artefacts revus et non sensibles. Ne pas déclencher les benchmarks lourds à chaque commit ; l’automatisation nocturne éventuelle de phase 8 reste un lot distinct à autoriser.
+- [ ] Définir permissions minimales des jobs/tokens, actions épinglées, séparation des contextes fiables/non fiables et protection des secrets dans logs/caches/artefacts ; interdire l’exécution de code de PR non fiable avec secrets ou accès aux infrastructures privées, y compris via un checkout privilégié ou un runner auto-hébergé.
+- [ ] Prévoir la validation GPU sur un runner spécialisé seulement après qualification de sécurité : sélection de références de confiance, isolation, quotas, arrêt des processus et autorisation opérateur ; aucune connexion automatique des PR publiques aux machines personnelles ou au LAN.
+- [ ] Documenter la matrice des jobs, déclencheurs, dépendances, délais et preuves attendues ; distinguer CI unitaire publique, intégration DB synthétique, benchmark/restauration manuels et qualification matérielle privée.
+
+Référence pour la future conception des permissions :
+[sécurité des workflows GitHub Actions](https://docs.github.com/en/actions/reference/security/secure-use).
+Les contrôles et études de sécurité phase 15 restent prérequis, pas des validations
+acquises par l’ajout de cette liste.
+
+## 17.2 Documentation publique et architecture serveur / workers
+
+Décomposition des lignes documentation et guides ci-dessus ; réutiliser le
+[plan README/About existant](docs/audit/README_ABOUT_PLAN.md) et les preuves B5,
+sans modifier aujourd’hui README, About ou les statuts des phases 0 à 3.
+**Priorité :** clarifier l’état et les prérequis avant toute nouvelle publication
+ou ouverture de l’accès aux workers ; compléter les guides à mesure des lots validés.
+
+- [ ] Revoir le README principal pour présenter objectifs, architecture serveur central H24 / workers temporaires et philosophie d’indépendance des fournisseurs d’IA ; distinguer Discovery Cache, Personal Model Catalog, orchestration et runtime.
+- [ ] Expliquer l’autorité centrale sur missions, versions, checkpoints et résultats, les seules données d’exécution conservées par les workers, et le cycle d’arrêt/reprise des lots 9.1/10.1, y compris les limites en cas de perte réseau ou coupure brutale.
+- [ ] Présenter séparément fonctionnalités opérationnelles, prototypes testés, études et capacités prévues ; dater et lier les preuves, sans présenter GPU visible, catalogue public accessible ou tests applicatifs comme une inférence ou une isolation OS validée.
+- [ ] Documenter les prérequis matériels et logiciels : serveur/stockage durable/sauvegardes, CPU/RAM, systèmes supportés, Python/Docker/runtimes et profils GPU/VRAM/pilotes éventuels ; distinguer prérequis minimaux CPU et exigences propres à chaque charge, sans imposer un modèle nommé ou un fournisseur unique.
+- [ ] Proposer une description About cohérente avec le README et le statut expérimental, puis faire valider son texte avant toute modification des métadonnées GitHub ; aucune publication implicite.
+- [ ] Documenter les cinq suites, leur compatibilité historique et la matrice CI du lot 17.1, les tests privés/GPU/OS non exécutables sur runners publics, ainsi que les procédures manuelles et autorisations requises.
+- [ ] Vérifier les liens, les guides serveur/worker et les descriptions des composants tiers ; garder ECC, interfaces tierces et fournisseurs de modèles facultatifs et présenter leurs limites sans promesse de fonctionnalité non livrée.
 
 ---
 
