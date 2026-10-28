@@ -1,6 +1,39 @@
 # Schéma global de l’architecture
 
-## Version Mermaid
+## État réel au 28 octobre 2026
+
+Les fondations Discovery et Control Plane sont testées séparément. La chaîne
+complète catalogue personnel → sélection → scheduler → runtimes reste une cible,
+pas un service distribué déployé. Aucune fusion d’identité entre plateformes.
+
+```mermaid
+flowchart TD
+    F[Sept fixtures et adaptateurs] --> B[SourceRecord et snapshots B2]
+    B --> C[Archives et reprise manuelle B4]
+    B --> G[Générateurs SQL manuels]
+    G -. import opérateur séparé .-> D[(POC PostgreSQL / SurrealDB)]
+    U[UI locale loopback] --> P[Control Plane Python / SQLite]
+    P --> A[Mission approuvée]
+    A --> W[Worker CPU SHA256 applicatif]
+    W -. mode strict refuse .-> I[Isolation OS NOT VERIFIED]
+```
+
+Les deux POC sont actuellement arrêtés sur VM150 et leurs données préservées.
+Le GPU invité est disponible ; inférence, calcul CUDA Docker et worker GPU
+sécurisé ne sont pas validés par ce constat. Le cache Discovery et le catalogue
+personnel restent distincts ; les scripts de génération SQL n’ouvrent pas de
+connexion DB. Voir [audit et dépendances](../audit/PHASES_0_3_COVERAGE.md),
+[contrats Discovery](../../database/poc/MANUAL_INCREMENTAL_RUN.md) et
+[audit B5.3.1](B531_SECURITY_AUDIT.md).
+
+## Ancienne cible matérielle — historique, non déployée
+
+Les schémas ci-dessous conservent la première proposition. Orca, Ray, Qdrant,
+Open WebUI et les agents H24 ne sont pas des composants validés du prototype
+actuel. Les choix de moteurs/interfaces et l’activation des workers multi-OS
+restent soumis aux lots et décisions de la roadmap.
+
+### Version Mermaid historique
 
 ```mermaid
 flowchart TD

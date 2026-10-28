@@ -1,5 +1,14 @@
 # Quickstart — Pepeuch AI Cluster
 
+**28 octobre 2026 : ce guide conserve une ancienne cible de déploiement.**
+Pour la démonstration locale testée sans GPU ni modèle, utiliser le
+[README](../../README.md) et les guides B5.1–B5.3 liés. Les commandes d’installation,
+provisionnement ou modification de services ci-dessous ne sont pas autorisées
+par l’audit actuel ; VM150 et ses données doivent être préservées. État réel :
+[architecture](../architecture/overview.md) et [inventaire VM150](../infrastructure/VM150_READONLY_20261028.md).
+
+## Texte historique du premier quickstart
+
 > Ce quickstart décrit la mise en route **minimale** du projet.
 >
 > L'objectif n'est pas de déployer tout le cluster immédiatement, mais de valider d'abord le MVP :

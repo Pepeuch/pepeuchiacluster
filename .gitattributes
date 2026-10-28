@@ -1,0 +1,3 @@
+# Verbatim audit snapshots retain the original TODO prefix, including EOF blanks.
+/docs/audit/TODO_PHASES_0_3_20261028.snapshot.txt whitespace=-blank-at-eof
+/docs/audit/TODO_PHASES_0_3_20261028_REPRISE.snapshot.txt whitespace=-blank-at-eof
