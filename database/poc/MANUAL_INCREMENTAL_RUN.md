@@ -78,8 +78,8 @@ ressource non observée n’est supprimée. Le plan possède `delete_actions: []
 Les tests injectent un échec dans un oracle en mémoire : transaction atomique
 et préfixe d’instructions déjà appliquées, rejeu idempotent, concurrence simulée,
 absence de mutation et conservation des lignes non observées. **Cela ne valide
-aucun moteur réel.** Les générateurs B2 ne mettent pas ces préconditions CAS en
-œuvre. Depuis la reprise du 28/10, le SQL régénéré porte une garde transactionnelle
+aucun moteur réel.** Les générateurs B2 n’activent pas ces préconditions CAS
+par défaut. Depuis la première reprise du 28/10, le SQL régénéré porte une garde transactionnelle
 d’antériorité, qualifiée en base synthétique : [preuve et limites](REPLAY_GUARD_PHASE3.md).
 Les anciens fichiers SQL restent sans cette garde ; le plan reste non exécutable.
 
@@ -115,3 +115,34 @@ SQL régénéré. Le plan ci-dessus reste non exécutable ; cela n’active pas 
 de production avec CAS, provenance obligatoire et isolation de stockage.
 Les révisions fournisseur, les politiques domaines/comptes, l’ordre de publication
 et la collecte/surveillance planifiée restent ouverts. POC historiques préservés.
+
+## Complément : génération CAS explicite et qualification concurrente
+
+La [reprise intégrité/CAS](INTEGRITY_CAS_PHASE3.md) ajoute un keyword
+`expected_snapshot` aux générateurs et une API de transition protégée à caches
+signés. Le plan reste non exécutable et les CLI historiques n’activent pas le
+CAS. Concurrence, préconditions refusées, interruptions/reprises et non-suppression
+sont qualifiées sur de nouvelles bases synthétiques PG/Surreal, sans restauration
+ou nouvelle campagne de performance. Comptes privés et writer de production
+restent bloqués par leurs contrats de stockage/provenance, non par un test simulé.
+
+## Complément : provenance et HTTP conditionnel injecté
+
+Le [lot provenance/HTTP](PROVENANCE_HTTP_PHASE3.md) ajoute `IssuerRegistry`,
+accepté par `run_manual(..., trusted_issuers=registry)`. Ses grants portent sur
+chaque source et contexte exacts. Une reprise déjà prévalidée est recontrôlée
+avant chaque publication ; la révocation dans un callback empêche la publication
+suivante. Vérification/événement et vérification/archivage sont coordonnés avec
+la révocation entre threads de la même instance. Les dictionnaires historiques
+restent compatibles, sans ces garanties de portée/cycle de vie.
+
+`conditional_discovery.run_conditional` est une **API séparée opt-in**, avec
+transport et normaliseur injectés. Elle lie les validateurs à l'URL et au cache
+par HMAC, raccorde GET/304 aux budgets et conserve l'observation sur 304.
+`archive_conditional` et `restore_conditional` exigent un descripteur à liaison
+HTTP et la confiance courante, sans modifier les archives B4 existantes.
+Les paragraphes antérieurs décrivent les limites de la CLI manuelle : elle reste
+sur fixtures et ne lance pas cette API ni de collecte réelle. Aucun 304 brut
+n'est accepté automatiquement, aucun magasin de clés ou writer DB n'est installé.
+Autorité durable/CLI protégée, reçus persistants, révisions distantes et domaines
+de stockage restent ouverts. 29 nouvelles régressions, 644 tests locaux réussis.

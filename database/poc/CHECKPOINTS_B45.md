@@ -149,3 +149,28 @@ CLI protégée, puis l'orchestration de reprise inter-sources. Pagination distan
 concurrence par hôte, quotas internes SDK et budget global exigent leurs propres
 contrats ; ils ne sont pas implémentés. Pas de réseau fournisseur, poids,
 inférence, GPU, base, migration ou scheduler dans ce lot.
+
+## Complément phases 0–3 — provenance et HTTP (28 octobre 2026)
+
+Les descriptions ci-dessus restent le contrat historique des primitives B4.5.
+Le [nouveau profil opt-in](PROVENANCE_HTTP_PHASE3.md) ajoute un registre en mémoire
+à grants exacts et une liaison HTTP signée séparée ; il ne change aucun format
+B2/B4/checkpoint. Un digest d'archive seul n'authentifie toujours pas les validateurs.
+Le profil exige la liaison en plus du checkpoint, son URL exacte et l'autorité
+courante. Une ancienne archive seule ne devient pas une preuve conditionnelle.
+
+`save_checkpoint(..., trusted_issuers=registry)` sérialise maintenant validation
+et publication contre la révocation d'un autre thread de cette instance.
+Le runner manuel recontrôle chaque cache repris, au lieu de se fier seulement
+à la prévalidation globale. La rotation/révocation refuse les générations anciennes
+sans les supprimer. Les dictionnaires historiques restent une confiance explicite
+globale, sans garanties de révocation concurrente ou de portée.
+
+Le GET injecté est raccordé au moteur budgété par une API séparée ; un 304 validé
+conserve le fichier, la génération, la capture et l'attestation, sans nouvelle
+observation fournisseur. Après expiration locale, 200 requis. L'archivage retourne
+un descripteur `{request, identity, http_binding}` que l'appelant doit conserver ;
+aucun magasin durable de ces descripteurs ou des clés n'est installé. Transport
+réel, CLI protégée et politiques par fournisseur restent différés.
+Les validateurs HTTP malformés sont désormais refusés explicitement, y compris
+en validant une ancienne entrée ; aucune archive n'est réécrite ou effacée.

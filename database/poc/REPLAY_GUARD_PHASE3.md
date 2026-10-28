@@ -107,3 +107,8 @@ Tests : `test_discovery_replay_guard.py` vérifie génération, transaction, con
 UTF-8, dates, absence de mutation/suppression et intégrité des preuves réelles.
 Les tests historiques ne sont pas modifiés ; les deux séries de benchmarks et
 leurs manifestes sont vérifiés séparément par les tests existants.
+
+Complément de reprise : [intégrité et CAS explicite](INTEGRITY_CAS_PHASE3.md).
+Le SQL peut désormais être généré avec une baseline attendue ; sa concurrence
+est qualifiée dans une série synthétique distincte. Les limites de la série
+historique ci-dessus restent conservées et le chemin brut n’active pas le CAS.

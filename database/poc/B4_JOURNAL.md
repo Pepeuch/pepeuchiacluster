@@ -1,5 +1,22 @@
 # Journal B4 — consolidation du Discovery Cache
 
+## Reprise intégrité/CAS depuis main — 28 octobre 2026
+
+Branche `feat/phases-0-3-integrity-cas`, base main `5ead575` après publication
+des six commits phases0–3 et de la TODO future. Aucun commit/push/merge/rebase.
+Correction des dates absentes/nulles, enveloppes non liées, scopes et provenance
+false/zéro assimilés, comparaisons temporelles et révisions vides CSV. Générateurs
+à copie défensive ; CAS opt-in et transition à provenance contrôlée anonyme,
+sans import automatique ni modification des identités, formats ou références.
+Les CLI existantes restent compatibles et le plan reste non exécutable.
+
+615 tests locaux réussis, dont 15 nouvelles régressions. Deux qualifications
+réelles CAS isolées PG16.15/Surreal3.3.4 : concurrence, attentes présentes/absentes,
+rejeux/réconciliation, erreurs/rollback, null/vide et non-suppression. Aucun
+nouveau benchmark ou restauration, POC historiques arrêtés/préservés ; artefacts
+de revue privés et ignorés. [Détail, chemins et limites](INTEGRITY_CAS_PHASE3.md).
+Les sections suivantes sont le journal historique et gardent leurs preuves datées.
+
 Branche de travail : `feat/discovery-b4-consolidation`.
 Départ : B3.3 `d528580ddd6e1c4b364b64e2322eb2649e7b2e62`.
 Autorisation : mission autonome, commits locaux par lot validé ; aucun push.
@@ -250,3 +267,31 @@ Les primitives B4.5 de cache/checkpoints sont validées ci-dessus ; restent leur
 raccordement, la fraîcheur, les clés, la sélection dynamique et les garanties SDK
 avant budgets de requêtes physiques.
 Pas de scheduler ni modification du Personal Model Catalog.
+
+### Phases 0–3 — provenance et HTTP conditionnel (28 octobre 2026)
+
+- Départ `feat/phases-0-3-integrity-cas`, HEAD `5ead575`, 11 fichiers modifiés et
+  8 nouveaux du lot CAS préservés. Audit préalable des contrats et limites dans
+  [PROVENANCE_HTTP_CONTRACT_AUDIT.md](../../docs/audit/PROVENANCE_HTTP_CONTRACT_AUDIT.md).
+- Registre local injecté : autorisations exactes source/contexte, générations de
+  clés non réutilisables, rotation et révocation. Validation courante au moment
+  de publier/archiver/reprendre ; un callback ne laisse plus publier un cache
+  prévalidé avant sa révocation. Verrou local contre la révocation concurrente.
+- Nouvelle liaison HMAC séparée URL/cache complet, couvrant les validateurs
+  auparavant hors attestation B4. Aucun changement d'identité, manifeste ou archive.
+- GET 200/304 sur transport/normaliseur explicitement injectés, budgets B4.4
+  conservés. 304 exige baseline authentifiée et conditions exactes ; conserve date,
+  provenance et génération. Expiration pendant attente/transport et contradictions
+  refusées ; pas de fraîcheur distante inventée ni repli sur un cache en erreur.
+- Validateurs syntaxiques durcis : ETag opaque unique et Last-Modified canonique.
+  Certaines valeurs malformées anciennement acceptées sont refusées sans modifier
+  les archives existantes ; références/snapshots valides des sept sources inchangés.
+- **644 tests réussis**, dont 29 nouveaux cas synthétiques et les 615 précédents.
+  Aucun test historique ni fixture de référence modifié. Le 304 brut B4.4 reste un
+  échec ; aucune CLI ou connecteur online n'est activé.
+- [Contrat et limites](PROVENANCE_HTTP_PHASE3.md) : autorité durable, CLI protégée,
+  stockage multi-compte, politique HTTP fournisseur, révisions et reçus persistants
+  restent ouverts. HMAC authentifie une déclaration locale, pas sa véracité.
+- Deux sous-tâches logicielles clôturées, 34 cases composites toujours ouvertes.
+  Aucune VM/base/Proxmox, collecte réelle, inférence, GPU, import, benchmark ou
+  nouvelle section 3.1+. Aucun commit/staging/push/merge/rebase.

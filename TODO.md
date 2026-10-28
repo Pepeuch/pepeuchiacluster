@@ -279,7 +279,7 @@ reste à développer ; ces validations portent sur des sondes et imports manuels
 - [ ] Valider les contrats d'identité/appairage/bail et l'API de mission avant B5.1 ; développer un faux worker puis autoriser séparément un pilote Linux CPU.
 - [ ] Choisir langage/packaging, stockage durable et politique de clés ; vérifier licences/artefacts exacts, notamment Desktop avant toute redistribution.
 - [ ] Établir une matrice réellement testée par OS/runtime ; aucune capacité GPU/inférence/agent annoncée comme vérifiée par cette étude.
-- [ ] Garder interfaces tierces, VM automatisée, compagnon multi-OS et USB dans des lots séparés ; aucune installation/provisionnement/migration effectués dans B5.0.
+- [x] Garder interfaces tierces, VM automatisée, compagnon multi-OS et USB dans des lots séparés ; aucune installation/provisionnement/migration effectués dans B5.0.
 
 ---
 
@@ -472,9 +472,48 @@ et scheduler restent à traiter séparément. Les **35 cases composites ouvertes
 le restent ; cette nouvelle sous-tâche clôturée ne les valide pas entièrement.
 Reprise et état Git conservés dans le [nouveau checkpoint durable](docs/audit/CHECKPOINT_20261028_REPRISE_PHASES_0_3.md).
 
+**Reprise phases 0–3 — intégrité et CAS (28 octobre 2026)**
+
+Le décompte précédent décrivait le checkpoint antérieur : une des 35 cases
+initiales est maintenant clôturée, soit **34 encore ouvertes** (28 en phase 1,
+4 en phase 2, 2 en phase 3 générale). La clôture T20 porte uniquement sur la
+séparation des lots B5.0 : revue des études et du commit documentaire
+`6b35b4127702d9bd58f1b1aa54ab8273f90314b9`, sans livraison ou validation matérielle
+supplémentaire. [Classification des 35 lignes et dépendances](docs/audit/PHASES_0_3_CLASSIFICATION_20261028.md).
+
+**IMPLEMENTED / TESTED** : intégrité de l’enveloppe et date B2 obligatoires,
+comparaison des scopes et de la provenance sans assimiler false/zéro, transitions
+aux instants exacts et révisions opaques, préconditions CAS opt-in et refus des
+comptes privés non cloisonnés. Le plan d’import reste non exécutable ; les CLI
+brutes gardent leur garde de date et n’activent pas automatiquement le CAS.
+Les résultats et limites de qualification sont consignés dans
+[le journal intégrité/CAS](database/poc/INTEGRITY_CAS_PHASE3.md).
+
+- [x] Refuser les dates/enveloppes B2 invalides, distinguer les types JSON dans les scopes et la provenance, et préserver les révisions vides/nulles ainsi que la copie défensive ; 15 nouvelles régressions locales, références historiques inchangées.
+- [x] Qualifier le chemin CAS explicite sur PostgreSQL/SurrealDB synthétiques : écrivains concurrents, attentes présentes/absentes, baseline obsolète, rejet de corruption, rollback/reprise et non-suppression ; aucun import automatique, restauration ou nouveau benchmark.
+
 Les révisions distantes, 304 intégrés, émetteurs, domaines/comptes, pagination/SDK,
 production HTTP/OS et pilote jetable restent ouverts. [Plan README/About](docs/audit/README_ABOUT_PLAN.md).
 Arrêt strict avant 3.1 ; aucun chapitre suivant modifié.
+
+**Lot provenance et HTTP conditionnel — 28 octobre 2026 (validation locale)**
+
+- [x] Ajouter une autorité d'émetteurs en mémoire à grants source/contexte exacts, révocation et rotation sans réutilisation d'alias/clé ; vérifier la confiance à la publication et à la reprise, y compris entre callbacks et lors d'un archivage concurrent.
+- [x] Raccorder un profil GET conditionnel injecté aux budgets B4.4 : liaison authentifiée URL/cache/validateurs, refus des 304 sans preuve suffisante ou après expiration, conservation exacte de l'observation sur 304, contradictions et révisions malformées refusées ; 29 nouvelles régressions synthétiques.
+
+**IMPLEMENTED / TESTED hors ligne** : 644 tests réussis, références B3.3 et
+formats/identités B2/B4 préservés ; les validateurs HTTP malformés autrefois
+acceptés superficiellement sont désormais refusés sans réécriture d'archives.
+[Contrat et limites](database/poc/PROVENANCE_HTTP_PHASE3.md),
+[checkpoint durable](docs/audit/CHECKPOINT_20261028_PROVENANCE_HTTP.md).
+L'attestation locale authentifie une déclaration, jamais la véracité du fournisseur.
+Un 304 conserve capture, provenance et génération ; il ne renouvelle pas la fraîcheur.
+
+**34 cases composites initiales toujours ouvertes** : T14/T15 restent PARTIAL
+(autorité durable, CLI protégée, politiques fournisseur et raccordement opérationnel
+non livrés). Domaines/comptes en stockage, révisions distantes, pagination/SDK,
+budgets globaux et service automatisé restent à décider/qualifier. Aucun accès
+VM150/Proxmox/POC, import, benchmark ou collecte réelle dans ce lot ; arrêt avant 3.1.
 
 ## 3.1 models.dev — source seed principale
 

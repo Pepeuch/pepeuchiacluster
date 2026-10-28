@@ -35,14 +35,15 @@ qualifiés pour un espace de modules partagé. Utiliser `tests/run_suites.py`.
 
 ## Migration progressive Discovery
 
-`tests.discovery` charge sept modules déplacés et vingt modules historiques.
+`tests.discovery` charge sept modules déplacés, deux modules supplémentaires
+(intégrité/CAS et provenance/HTTP), et vingt modules historiques.
 Le relais `database/poc/test_discovery_consolidation.py` préserve la commande :
 
 ```bash
 python3 -m unittest discover -s database/poc -p 'test_*.py' -q
 ```
 
-Les deux points d’entrée exposent **les mêmes 347 cas uniques**, sans doublon.
+Les deux points d’entrée exposent **les mêmes 391 cas uniques**, sans doublon.
 Le package ajoute le chemin du code `database/poc/`, sans modifier les adaptateurs.
 Un module déplacé se cible par exemple ainsi :
 
@@ -82,6 +83,8 @@ n’est pas conservé. Aucun des vingt chemins de tests historiques n’est dép
 | test_isolated_bench_contracts | 13 | tests/discovery ; fixture observée masquée sous POC_ROOT |
 | test_isolated_bench_results | 5 | tests/discovery ; preuves privées sous POC_ROOT |
 | test_manual_discovery_run | 13 | tests/discovery ; FakeClock de test_execution_b44 |
+| test_integrity_cas | 15 | tests/discovery ; contrats B2/CAS et génération SQL, aucune base réelle |
+| test_conditional_provenance | 29 | tests/discovery ; fixture HTTP synthétique, horloge/transport injectés, registre éphémère et fichiers temporaires privés |
 
 Les vingt anciens modules totalisent **272 cas**. Leur migration physique est
 reportée : chemins `__file__`, helpers, procédures VM et points d’entrée nécessitent
@@ -97,17 +100,21 @@ un besoin et une migration dédiée. Les deux fixtures nouvelles sont synthétiq
 
 Les trois exports `database/poc/results/20261028-vm150-*` sont **privés, ignorés
 par Git, conservés sans modification**. Voir [l’inventaire des exclusions](../docs/audit/LOCAL_COMMITS_PHASES_0_3.md).
+Un quatrième dossier privé `20261028-vm150-cas/` conserve la qualification
+fonctionnelle CAS distincte des benchmarks ; aucun de ces résultats n'est ajouté
+au versionnement. La fixture additive `http_conditionals.synthetic.json` est
+entièrement synthétique ; aucune clé, attestation ou donnée d'authentification.
 La préparation de confidentialité rend sept contrôles de preuves privées
 explicitement `skipped` si leur dossier est absent. Les assertions restent intactes ;
 un dossier présent mais incomplet/corrompu échoue. Cette précondition est distincte
 du déplacement et n’autorise aucune acquisition réseau.
 
-Avec les exports locaux : **600 succès** (347 Discovery, 123 Control Plane,
+Avec les exports locaux : **644 succès** (391 Discovery, 123 Control Plane,
 19 infrastructure, 63 isolation applicative, 48 worker). Sans exports :
-**593 succès et sept skipped**, sans nouvelle qualification de bases réelles.
+**637 succès et sept skipped**, sans nouvelle qualification de bases réelles.
 
 Les exécutables `benchmark_readonly.py`, `isolated_docker_bench.py` et leurs
 modules restent dans `database/poc/`, séparés du lanceur unittest.
 `tests/browser_b51.py` est une validation navigateur explicite avec binaires
-locaux ; elle reste hors des 600 tests et n’est pas relancée ici. Aucun pilote
+locaux ; elle reste hors des 644 tests et n’est pas relancée ici. Aucun pilote
 négatif OS privilégié n’est activé.

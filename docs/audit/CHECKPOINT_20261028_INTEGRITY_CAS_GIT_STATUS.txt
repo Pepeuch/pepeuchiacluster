@@ -1,0 +1,19 @@
+ M .gitignore
+ M TODO.md
+ M database/poc/B4_JOURNAL.md
+ M database/poc/MANUAL_INCREMENTAL_RUN.md
+ M database/poc/REPLAY_GUARD_PHASE3.md
+ M database/poc/discovery_cache.py
+ M database/poc/discovery_provenance.py
+ M database/poc/emit_discovery_import.py
+ M database/poc/incremental_import_plan.py
+ M database/poc/isolated_docker_bench.py
+ M docs/audit/PHASES_0_3_COVERAGE.md
+?? database/poc/INTEGRITY_CAS_PHASE3.md
+?? database/poc/discovery_import_contract.py
+?? database/poc/isolated_cas_qualification.py
+?? docs/audit/CHECKPOINT_20261028_INTEGRITY_CAS_GIT_STATUS.txt
+?? docs/audit/CHECKPOINT_20261028_INTEGRITY_CAS_PHASES_0_3.md
+?? docs/audit/CHECKPOINT_20261028_INVENTORY_PHASES_0_3.md
+?? docs/audit/PHASES_0_3_CLASSIFICATION_20261028.md
+?? tests/discovery/test_integrity_cas.py

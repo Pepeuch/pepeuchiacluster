@@ -1,0 +1,61 @@
+Checkpoint provenance/HTTP — 2026-10-28T23:42:20.942096+01:00
+Branch: feat/phases-0-3-integrity-cas
+HEAD: 5ead5754bd3424356eaf243bf6db271337a8faaa
+main: 5ead5754bd3424356eaf243bf6db271337a8faaa
+Index: empty
+16 tracked modified, 16 untracked; includes earlier CAS work.
+No commit, push, merge or rebase.
+
+git status -sb
+## feat/phases-0-3-integrity-cas
+ M .gitignore
+ M TODO.md
+ M database/poc/B4_JOURNAL.md
+ M database/poc/CHECKPOINTS_B45.md
+ M database/poc/MANUAL_INCREMENTAL_RUN.md
+ M database/poc/REPLAY_GUARD_PHASE3.md
+ M database/poc/discovery_cache.py
+ M database/poc/discovery_checkpoints.py
+ M database/poc/discovery_provenance.py
+ M database/poc/emit_discovery_import.py
+ M database/poc/incremental_import_plan.py
+ M database/poc/isolated_docker_bench.py
+ M database/poc/manual_discovery_run.py
+ M database/poc/validated_discovery_cache.py
+ M docs/audit/PHASES_0_3_COVERAGE.md
+ M tests/README.md
+?? database/poc/INTEGRITY_CAS_PHASE3.md
+?? database/poc/PROVENANCE_HTTP_PHASE3.md
+?? database/poc/conditional_discovery.py
+?? database/poc/discovery_import_contract.py
+?? database/poc/discovery_issuers.py
+?? database/poc/fixtures/http_conditionals.synthetic.json
+?? database/poc/isolated_cas_qualification.py
+?? docs/audit/CHECKPOINT_20261028_INTEGRITY_CAS_GIT_STATUS.txt
+?? docs/audit/CHECKPOINT_20261028_INTEGRITY_CAS_PHASES_0_3.md
+?? docs/audit/CHECKPOINT_20261028_INVENTORY_PHASES_0_3.md
+?? docs/audit/CHECKPOINT_20261028_PROVENANCE_HTTP.md
+?? docs/audit/CHECKPOINT_20261028_PROVENANCE_HTTP_GIT_STATUS.txt
+?? docs/audit/PHASES_0_3_CLASSIFICATION_20261028.md
+?? docs/audit/PROVENANCE_HTTP_CONTRACT_AUDIT.md
+?? tests/discovery/test_conditional_provenance.py
+?? tests/discovery/test_integrity_cas.py
+
+git diff --stat (tracked files only)
+ .gitignore                                |  1 +
+ TODO.md                                   | 41 +++++++++++++++-
+ database/poc/B4_JOURNAL.md                | 45 ++++++++++++++++++
+ database/poc/CHECKPOINTS_B45.md           | 25 ++++++++++
+ database/poc/MANUAL_INCREMENTAL_RUN.md    | 35 +++++++++++++-
+ database/poc/REPLAY_GUARD_PHASE3.md       |  5 ++
+ database/poc/discovery_cache.py           |  7 ++-
+ database/poc/discovery_checkpoints.py     |  6 +++
+ database/poc/discovery_provenance.py      | 52 +++++++++++++++++++-
+ database/poc/emit_discovery_import.py     | 79 +++++++++++++++++++++++++++----
+ database/poc/incremental_import_plan.py   |  9 +---
+ database/poc/isolated_docker_bench.py     | 14 +++++-
+ database/poc/manual_discovery_run.py      | 23 +++++++--
+ database/poc/validated_discovery_cache.py | 15 +++++-
+ docs/audit/PHASES_0_3_COVERAGE.md         | 43 +++++++++++++++++
+ tests/README.md                           | 17 +++++--
+ 16 files changed, 381 insertions(+), 36 deletions(-)

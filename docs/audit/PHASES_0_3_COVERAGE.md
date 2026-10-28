@@ -1,5 +1,23 @@
 # Audit de couverture — phases 0 à 3 générales
 
+**Reprise depuis main `5ead575` sur `feat/phases-0-3-integrity-cas` : 34 cases
+initiales encore ouvertes, une clôture documentaire T20.** Classement des 35 :
+[matrice de reprise](PHASES_0_3_CLASSIFICATION_20261028.md). Les décomptes à 35
+ci-dessous sont les checkpoints historiques, conservés avec leurs preuves.
+Intégrité, provenance et CAS opt-in : 615 tests locaux, concurrence et reprises
+qualifiées réellement sur nouvelles bases synthétiques des deux moteurs,
+sans restauration ou benchmark. [Contrat et preuves](../../database/poc/INTEGRITY_CAS_PHASE3.md).
+Aucune CLI de production, isolation comptes/domaines ou révision fournisseur
+n’est validée par ces seuls résultats ; les grandes lignes composites restent ouvertes.
+
+**Lot suivant provenance/HTTP : 644 tests locaux réussis**, dont 29 nouveaux.
+Autorité en mémoire à grants exacts, publication/reprise sous confiance courante,
+GET conditionnel injecté budgété et liaison HTTP signée distincte de B4.
+T14/T15 progressent sans clôture : gestion durable des clés, CLI et politiques
+fournisseur restent ouvertes. Toujours **34 cases initiales ouvertes**.
+[Contrat](../../database/poc/PROVENANCE_HTTP_PHASE3.md),
+[checkpoint courant](CHECKPOINT_20261028_PROVENANCE_HTTP.md).
+
 Date : 28 octobre 2026. Base `d9180f6`, arbre initial propre ; branche
 `feat/todo-phases-0-3`. Lecture intégrale de TODO et README ; examen des scripts,
 Compose, ADR et contrats B2/B4/B5. La borne est **avant `## 3.1 models.dev`**.
@@ -268,3 +286,28 @@ Preuves : [manifeste final](../../database/poc/results/20261028-vm150-isolated-s
 [vérification hors ligne des mesures privées](../../tests/discovery/test_isolated_bench_results.py).
 Le périmètre des autres gates (backup VM150, script Proxmox, OS/multi-OS) reste
 bloqué ; l’autorisation du banc ne les couvre pas. Aucun volume historique changé.
+
+## Lot local provenance et HTTP conditionnel — 28 octobre 2026
+
+Les résultats VM/CAS/benchmarks précédents ci-dessus sont conservés sans nouvelle
+exécution. Ce lot ne contacte aucune infrastructure ou source distante.
+
+| Tâche initiale | Avancée prouvée | Reste ouvert |
+|---|---|---|
+| T14 — émetteurs et CLI protégée | Registre injecté, grants source/contexte, rotation/révocation sans résurrection, recontrôle des publications/checkpoints/reprises | Autorité durable, administration/clé hors processus, CLI de confiance et politique de signatures après rotation |
+| T15 — 304/budgets/reprise/fraîcheur | GET injecté sous budgets, liaison signée URL/cache complet, 304 strict, expiration sans renouveler l'observation, refus sur reprise non approuvée | Transport réel par source, reçus persistants et politique opérationnelle ; aucun test fournisseur |
+| T09/T11/T12 — contrats/contextes | Révisions opaques/null conservées, domaine/partition exacts et contextes incompatibles refusés | Isolation physique du stockage, autres comptes/représentations, NIM multitag/partiels |
+| T13/T34/T35 — import/service | Générateurs protégés compatibles avec le registre ; aucun contournement silencieux par la reprise | B2 brut toujours sans preuve d'origine, writer/service/collecte distante non activés |
+
+Deux sous-tâches locales dédiées sont cochées dans TODO ; **aucune des 34 lignes
+composites n'est clôturée**. Phase 1 : 28, phase 2 : 4, phase 3 générale : 2.
+Le classement initial est conservé ; ces avancées ne lèvent aucun GO matériel/OS.
+
+29 nouveaux tests synthétiques et 615 précédents : **644 OK** (391 Discovery,
+123 Control Plane, 19 infrastructure simulée, 63 isolation applicative, 48 worker).
+Les sockets loopback/Unix des anciennes suites sont exécutées sous l'UID courant,
+sans installation ou privilèges supplémentaires. Les nouveaux tests interdisent
+réseau, DNS, processus et attente réelle, sauf synchronisation bornée des threads.
+ETag malformés et Last-Modified non canoniques désormais refusés : durcissement
+documenté, pas une migration de format. Tous les anciens tests/fixtures restent
+intacts ; aucune véracité fournisseur ni fraîcheur distante n'est revendiquée.
