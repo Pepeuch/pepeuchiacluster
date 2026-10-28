@@ -5,6 +5,11 @@ Objectif : *mémoriser ce qui a été découvert*, sans remplir encore le
 Les scripts génèrent des fichiers et **ne modifient jamais eux-mêmes une BD**.
 La mise à jour des POC doit être lancée explicitement après inspection.
 
+**Actualisation du 28 octobre** : SQL nouvellement généré avec garde anti-rejeu,
+qualifiée sur les seules bases synthétiques isolées. Les commandes historiques
+ci-dessous ne constituent pas une autorisation de démarrer ou modifier les POC.
+Voir [contrat, preuves et limites de la protection](REPLAY_GUARD_PHASE3.md).
+
 ## Contrat commun
 
 Le snapshot JSON `pepeuch-ai.discovery-cache/v1` conserve :
@@ -161,11 +166,13 @@ sudo docker compose -f infrastructure/docker/compose.surreal-poc.yaml \
   /data/discovery-b2-local5.surql
 ```
 
-**Attention :** contrairement au `COPY` PostgreSQL transactionnel, l'import
-SurrealDB `/import` est appliqué instruction par instruction. Après un échec,
-ne pas supposer un rollback global ; corriger puis relancer le même fichier
-dont les `UPSERT` possèdent des IDs déterministes. Les permissions d'accès
-éventuelles utilisent la configuration déjà présente sur la VM.
+**Attention :** les anciens fichiers SurrealDB appliquent `/import` instruction
+par instruction, sans rollback global. Le générateur actuel place contrôle
+d’antériorité et écritures dans une transaction explicite ; les fichiers déjà
+produits ne sont pas protégés rétroactivement. Les conserver comme artefacts et
+régénérer vers un nouveau fichier avant revue, sans changer `captured_at` pour
+contourner un refus. Contrôler toutes les erreurs et ne pas poursuivre après un
+refus. Les permissions utilisent la configuration déjà présente sur la VM.
 
 Lire les compteurs sans effacer :
 
@@ -215,5 +222,6 @@ python3 database/poc/compare_discovery_snapshots.py \
   avant d'ajouter des migrations ou politiques de rétention.
 - Les données brutes suivent les limites et conditions de chaque fournisseur ;
   ne jamais stocker de jetons d'API dans les snapshots.
-- PostgreSQL/SurrealDB ne sont **pas** encore départagés sur les performances,
-  le graphe ou les vecteurs.
+- Les [mesures synthétiques comparables](ISOLATED_DOCKER_BENCH.md) existent ;
+  adoption/licence d’usage et choix du moteur restent ouverts. Le garde de date
+  n’ordonne pas les révisions fournisseur et n’isole pas les comptes/domaines.

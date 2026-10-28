@@ -114,17 +114,17 @@ OpenAI / Mistral / autres providers
 
 - [ ] Créer la VM via le script Proxmox
 - [x] Vérifier réseau / stockage / SSH
-- [ ] Passer la RTX A2000 en passthrough
-- [ ] Vérifier `lspci`
-- [ ] Installer le driver NVIDIA
-- [ ] Vérifier `nvidia-smi`
-- [ ] Installer NVIDIA Container Toolkit
-- [ ] Vérifier le GPU depuis Docker
+- [x] Passer la RTX A2000 en passthrough
+- [x] Vérifier `lspci`
+- [x] Installer le driver NVIDIA
+- [x] Vérifier `nvidia-smi`
+- [x] Installer NVIDIA Container Toolkit
+- [x] Vérifier le GPU depuis Docker
 - [x] Installer / valider Docker Compose
 - [x] Créer `/opt/pepeuch-ai`
-- [ ] Définir volumes persistants
+- [x] Définir volumes persistants — Compose existants et montages VM150 confirmés le 28/10 ; voir la politique de stockage.
 - [ ] Définir sauvegarde de la VM
-- [ ] Ajouter healthchecks de base
+- [x] Ajouter healthchecks de base — configuration et cinq dernières sondes de chaque base confirmées en lecture seule ; bases actuellement arrêtées, disponibilité courante non validée.
 
 **Checkpoint VM 150 — 27 octobre 2026**
 
@@ -136,8 +136,39 @@ OpenAI / Mistral / autres providers
 - [x] Corriger le healthcheck SurrealDB (`/surreal is-ready`) ; conteneur `Healthy`.
 - [x] Limiter le cache RocksDB à 512 Mio (`SURREAL_ROCKSDB_BLOCK_CACHE_SIZE=536870912`) et les tampons d'écriture du POC.
 - [ ] Définir et vérifier une sauvegarde/restauration Proxmox de la VM 150 avant d'y stocker des données irremplaçables.
-- [ ] Vérifier les healthchecks de l'ensemble des services (SurrealDB confirmé `Healthy` ; état `healthy` de PostgreSQL encore à confirmer).
-- [ ] Reprendre le passthrough RTX A2000 : échec VFIO/FLR (`stuck in D3`), validation GPU dans la VM reportée ; ne pas bloquer le POC CPU.
+- [ ] Confirmer la disponibilité courante des healthchecks des deux bases après autorisation : cinq dernières sondes de chaque base réussies avant l’arrêt, mais conteneurs actuellement arrêtés ; aucun démarrage autorisé.
+- [x] Résoudre le blocage VFIO/FLR (`stuck in D3`) constaté le 27 octobre : passthrough et GPU Docker validés par l’utilisateur le 28 octobre ; voir le checkpoint ci-dessous.
+
+**Checkpoint GPU VM150 — 28 octobre 2026 (rapport utilisateur)**
+
+**VERIFIED** : Proxmox VE 9.2, Debian 13, A2000 12 Go/VFIO, hôte sur iGPU Intel,
+BIOS ASUS PRIME Z790M-PLUS D4 1836, NVIDIA 615.71.10, Secure Boot/MOK,
+Toolkit 1.20.1 et Docker 29.9.2. `lspci`, `nvidia-smi` (12 282 MiB), programme
+CUDA Debian de 256 threads/256 résultats corrects et GPU visible dans Docker.
+[Preuves, provenance et limites](docs/infrastructure/VM150_GPU_20261028.md).
+**NOT VERIFIED** : CUDA dans Docker, inférence, charge prolongée et isolation OS.
+Les six cases GPU et le doublon historique VFIO sont clôturés sur ces preuves,
+sans nouvelle intervention système. Les essais VM script/backup/restore restent
+**BLOCKED** faute d’environnement jetable autorisé et de GO d’accès Proxmox.
+
+**Audit phases 0–3, arrêt avant 3.1 — 28 octobre 2026**
+
+[Inventaire exhaustif initial et dépendances](docs/audit/PHASES_0_3_COVERAGE.md) :
+49 cases ouvertes avant ce lot (0/38/9/2 par phase), dont 9 lignes clôturées :
+six GPU, résolution VFIO, volumes persistants et ajout des healthchecks de base.
+Leur readiness historique est prouvée, leur disponibilité courante reste ouverte.
+Travail sur `feat/todo-phases-0-3`, `main` préservé.
+Le plan VM et les tests locaux sont **IMPLEMENTED / TESTED**, pas une création
+Proxmox **VERIFIED**. Après échec initial des clés, accès VM150 réussi avec le
+mot de passe explicitement fourni, limité à cette VM : GPU/versions/montages
+confirmés. **Les deux bases sont arrêtées** (`Exited (0)`, health mémorisé
+`unhealthy`) ; aucun démarrage ni requête SQL. Proxmox reste inaccessible par
+la clé essayée ; aucun essai de mot de passe sur cet hôte, agent QEMU ou changement
+d’authentification. [Inventaire réel](docs/infrastructure/VM150_READONLY_20261028.md),
+[stockage et GO nécessaires](docs/infrastructure/STORAGE_AND_VALIDATION.md).
+Après ce lot local, 40 cases restaient ouvertes ; le banc isolé ci-dessous en clôture
+ensuite cinq, soit **35 restantes** avant 3.1. Aucun POC historique modifié.
+Aucun accès supplémentaire à Proxmox autorisé ; bases conservées arrêtées.
 
 **Jalon :** un conteneur Docker peut utiliser correctement l'A2000.
 
@@ -317,20 +348,20 @@ Objectif : choisir le moteur de données avant de figer le schéma.
 - [x] Comparer les six compteurs PostgreSQL/SurrealDB : 405 modèles, 196 open weights, 397 contextes positifs, 8 nuls, 154 poids, 135 benchmarks.
 - [x] Confirmer les 405 modèles SurrealDB après redémarrage ; exporter et restaurer la sauvegarde dans `poc_restore_20261027`.
 - [x] Valider la parité **14/14 requêtes en lecture seule** entre PostgreSQL et SurrealDB, y compris la régression `tool_call` / tool calling (349 modèles) ; ne pas assimiler les temps CLI/Docker à la latence du moteur.
-- [ ] Comparer les moteurs sur les **mêmes requêtes représentatives**, index et mesures de performance ; aucun choix arrêté.
+- [x] Comparer les moteurs sur les **mêmes requêtes représentatives**, index et mesures de performance ; aucun choix arrêté.
 
 - [ ] Finaliser le POC comparatif **PostgreSQL vs SurrealDB** (performances, graphe, vecteurs et contraintes d'exploitation).
 - [x] Importer un échantillon réel de `models.dev` dans les deux moteurs (ici les 405 TOML du snapshot épinglé).
-- [ ] Tester les requêtes représentatives :
+- [x] Tester les requêtes représentatives :
   - modèle → base model → quantification
   - modèle → provider → coût
   - modèle → runtime → GPU compatible
   - modèle → rôle candidat
   - modèle → benchmark local
-- [ ] Tester la recherche vectorielle / hybride
-- [ ] Tester relations de graphe et liens typés
+- [x] Tester la recherche vectorielle / hybride
+- [x] Tester relations de graphe et liens typés
 - [x] Tester sauvegarde / restauration sur les deux POC, dans des bases distinctes des sources.
-- [ ] Tester Docker et consommation mémoire
+- [x] Tester Docker et consommation mémoire
 - [ ] Vérifier précisément les contraintes de licence de SurrealDB avant adoption
 - [ ] Décider du moteur principal
 - [ ] Documenter la décision
@@ -361,6 +392,33 @@ benchmark_cases
 
 **Jalon :** un moteur de données est choisi sur des tests concrets et peut stocker un modèle, ses variantes, relations, runtimes et benchmarks.
 
+**Checkpoint réel — banc Docker isolé VM150, 28 octobre 2026**
+
+**VERIFIED** : images locales exactes PostgreSQL 16.15 / SurrealDB 3.3.4 ; deux
+nouveaux conteneurs non privilégiés, réseau interne sans port publié, 2 CPU / 4 Gio /
+256 PID chacun. Paliers 30 → 1 000 → 10 000, huit requêtes avant/après index,
+plans obligatoirement validés, latences client et profils d’exécution séparés.
+Session Surreal établie avant les mesures ; aucune clé/JWT dans les rapports.
+
+Cinq lignes closes sur ce périmètre **synthétique**, pas sur une charge de production :
+comparaison requêtes/index/mesures, requêtes représentatives, vecteur/hybride
+**exacts 16 dimensions**, relations typées, Docker/CPU/mémoire. ANN, caches OS
+froids, concurrence, qualité d’embeddings et autres parcours restent non validés.
+Les snapshots/contrats historiques sont inchangés ; aucune migration/adoption décidée.
+
+Les lots sont découpés entre instructions, bornés à 512 Kio UTF-8 avec transaction
+et reçu ; résultat contrôlé avant chaque lot suivant. Interruption entre lots,
+reconnexion, reprise et rejeu sans doublon/perte validés dans les deux moteurs.
+Huit restaurations vers de nouvelles destinations, empreintes identiques.
+Pic cgroup : 157,01 Mio PG / 625,25 Mio Surreal ; aucun OOM/seuil matériel surveillé
+sur cette série bornée. Les deux conteneurs d’essai sont arrêtés, artefacts conservés.
+POC historiques maintenus arrêtés, métadonnées Docker et montages identiques.
+
+**PARTIAL / BLOCKED** : finalisation du choix DB, revue des contraintes de licence
+et validation de la décision. Les mesures favorisent PostgreSQL sur cette charge,
+sans classement universel moteur. [Rapport, limites et erreurs conservées](database/poc/ISOLATED_DOCKER_BENCH.md),
+[mesures finales avec session](database/poc/results/20261028-vm150-isolated-session/review-manifest.json).
+
 # Phase 3 — Sources externes & Model Discovery
 
 Objectif : exploiter les catalogues existants au lieu de reconstruire leur travail.
@@ -381,6 +439,42 @@ Objectif : exploiter les catalogues existants au lieu de reconstruire leur trava
 - [x] Vérifier les comparaisons : même snapshot = **5 inchangées** ; simulation contrôlée = **1 ajoutée, 1 modifiée, 1 non observée, 3 inchangées**. `not_observed` n'autorise aucune suppression.
 - [x] Collecter réellement **11 ressources** de `models.dev` (5), Hugging Face (2), Awesome AI Agents (3) et NVIDIA NIM (1) ; contrôler intégrité et identités ; importer **11/11** dans PostgreSQL et SurrealDB sans toucher aux 405 modèles historiques.
 - [ ] Éprouver les imports partiellement échoués, les changements de révision réels et les variations de périmètre ; conserver les snapshots et définir la politique de rafraîchissement.
+
+**Checkpoint phases 0–3 générales — 28 octobre 2026 (lots locaux)**
+
+**IMPLEMENTED / TESTED** : `manual_discovery_run.py` raccorde les budgets B4.4
+aux checkpoints B4.5 sur les sept fixtures. Archives immuables, fraîcheur explicite,
+reprise par génération choisie, succès conservés et échecs partiels signalés.
+Le plan d’import incrémental reste **non exécutable** : préconditions/rejeu testés
+en mémoire, aucune garantie DB réelle revendiquée. CLI et identités historiques
+préservées ; aucun transport online, scheduler ou accès aux bases ajouté.
+[Contrat et limites](database/poc/MANUAL_INCREMENTAL_RUN.md).
+
+**VERIFIED sur le banc isolé autorisé** : roundtrips B2 des sept sources,
+cinq types de ressources, révision simulée sans changement d’identité, champs
+inconnus et null/false/zéro/liste vide, scopes incompatibles refusés, non-suppression,
+absence de fusion interplateforme, erreurs/reprises et restauration du cache final
+à neuf ressources. Tous les snapshots et générateurs historiques sont préservés.
+[Preuves réelles](database/poc/ISOLATED_DOCKER_BENCH.md).
+
+**Risque historique reproduit** : les anciens fichiers SQL peuvent remplacer un
+état récent. **Correction du SQL régénéré VERIFIED sur synthétique** : transaction
+et garde de capture qualifiées dans les deux moteurs ; ancien rejeu et conflit
+au même instant refusés sans perte/ajout résiduel, fuseaux équivalents acceptés.
+
+- [x] Protéger les imports B2 nouvellement générés contre les captures anciennes et les conflits au même instant, sans changer clés/empreintes/snapshots ; qualifier sur les bases synthétiques isolées et conserver les anciens artefacts. [Contrat et preuves](database/poc/REPLAY_GUARD_PHASE3.md).
+
+**PARTIAL** : aucune protection rétroactive des anciens SQL, preuve d’ordre des
+révisions fournisseur ou isolation comptes/domaines. Le plan CAS reste non
+exécutable ; les lots du banc ne constituent pas un Discovery Service automatisé.
+Révisions fournisseurs réelles, ordre de publication global, fraîcheur, collecte
+et scheduler restent à traiter séparément. Les **35 cases composites ouvertes**
+le restent ; cette nouvelle sous-tâche clôturée ne les valide pas entièrement.
+Reprise et état Git conservés dans le [nouveau checkpoint durable](docs/audit/CHECKPOINT_20261028_REPRISE_PHASES_0_3.md).
+
+Les révisions distantes, 304 intégrés, émetteurs, domaines/comptes, pagination/SDK,
+production HTTP/OS et pilote jetable restent ouverts. [Plan README/About](docs/audit/README_ABOUT_PLAN.md).
+Arrêt strict avant 3.1 ; aucun chapitre suivant modifié.
 
 ## 3.1 models.dev — source seed principale
 

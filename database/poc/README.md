@@ -1,5 +1,10 @@
 # Database POC — models.dev → PostgreSQL
 
+Automated suites are progressively centralized under `tests/discovery/`;
+see [test commands and compatibility](../../tests/README.md). The historical
+discovery command below remains supported. Private VM campaign results are not
+distributed through Git, and benchmarks remain separate executable tools.
+
 This is an **experiment**, not a final database decision. It uses a disposable
 `poc` schema and preserves each model's raw TOML metadata as JSONB.
 

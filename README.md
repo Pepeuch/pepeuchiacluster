@@ -27,6 +27,19 @@ Agents / Workflows
 
 Voir [`TODO.md`](TODO.md) pour la roadmap et [`MIGRATION.md`](MIGRATION.md) pour le plan de restructuration.
 
+État au 28 octobre 2026 : [audit des phases 0–3 et validations restantes](docs/audit/PHASES_0_3_COVERAGE.md).
+La VM150 dispose du GPU ; ses deux POC de bases sont actuellement arrêtés et
+préservés. Le Discovery manuel est testé sur fixtures, le mode worker strict
+refuse tant que l’isolation OS n’est pas qualifiée. Aucune inférence ou collecte
+planifiée de production n’est annoncée. [Architecture et limites actuelles](docs/architecture/overview.md).
+Un [banc Docker isolé sur VM150](database/poc/ISOLATED_DOCKER_BENCH.md) valide
+PostgreSQL/SurrealDB sur 30 à 10 000 modèles synthétiques, avec plans, reprise
+entre lots et restaurations. Les conteneurs d’essai sont arrêtés et conservés ;
+cela n’active ni les POC historiques ni un Discovery Service de production.
+
+Suites automatisées : `python3 tests/run_suites.py -q` ;
+[organisation, commandes et preuves privées facultatives](tests/README.md).
+
 ## Prototype local B5.1 — missions et fichiers persistants
 
 Le Control Plane fonctionne sans fournisseur IA, modèle ou GPU. Coordinateur

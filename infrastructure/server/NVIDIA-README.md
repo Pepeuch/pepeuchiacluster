@@ -1,5 +1,12 @@
 # NVIDIA VM setup
 
+État réel VM150 au 28 octobre 2026 : driver 615.71.10, Secure Boot/MOK,
+Toolkit 1.20.1 et GPU visible dans Docker validés par l'utilisateur ; voir le
+[checkpoint et ses limites](../../docs/infrastructure/VM150_GPU_20261028.md).
+Ne pas réinstaller cette pile pour suivre ce guide. CUDA Docker, inférence et
+stabilité prolongée ne sont pas encore validés ; le script d'installation reste
+une procédure à examiner pour un nouvel environnement, pas une preuve de ces tests.
+
 Run this script **inside the AI VM** after the NVIDIA GPU has been attached through Proxmox PCIe passthrough.
 
 ## Usage

@@ -18,6 +18,33 @@ Le GPU n'est **pas** attaché automatiquement. Le passthrough NVIDIA sera ajout�
 
 ## Utilisation
 
+Avant toute exécution sur un hyperviseur, plan hors ligne sans root, réseau,
+lecture de clé ou commande Proxmox :
+
+```bash
+VMID=9500 VMNAME=pepeuch-test-9500 MEMORY_MB=2048 CORES=2 DISK_GB=16 \
+  bash infrastructure/proxmox/create-ai-vm.sh --plan
+```
+
+L'exécution sans option conserve l'interface historique mais **applique réellement**
+le plan : root et GO opérateur nécessaires, VM150 protégée. Aucun essai Proxmox réel
+n'est validé par les tests locaux. Python 3 est désormais requis sur l'hôte pour
+valider les paramètres avant toute écriture ; aucune installation n'est automatique
+sur l'hôte. `SNIPPET_DIR` est surchargeable pour les tests isolés.
+
+`IMAGE_SHA256` permet de vérifier image téléchargée/cache existant. Pour le pilote
+réel, fournir le SHA256 vérifié d'une image Debian précise, pas seulement le lien
+mobile `latest`. Sans checksum, l'image reste NOT VERIFIED. Aucun fichier cloud-init
+préexistant, lien ou image corrompue n'est écrasé. Le disque importé doit être
+l'unique `unusedN` attendu, jamais le dernier volume trouvé au hasard.
+
+Le compte cloud-init est un **administrateur de VM** (sudo sans mot de passe et
+groupe docker), pas un worker isolé. La clé doit être une ligne publique simple,
+sans options ; les contenus ne sont pas affichés. Le script ne démarre pas la VM,
+n'attache pas de GPU et ne détruit pas automatiquement une création partielle.
+Retour arrière : inspecter uniquement les nouveaux VMID/disques/snippets, puis
+faire approuver leur retrait ciblé ; jamais agir sur VM150 ou un artefact inconnu.
+
 Copier le script sur le host Proxmox puis :
 
 ```bash

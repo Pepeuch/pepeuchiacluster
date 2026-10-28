@@ -29,7 +29,7 @@ DEBIAN_RELEASE="${DEBIAN_RELEASE:-13}"
 IMAGE_URL="${IMAGE_URL:-https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2}"
 IMAGE_FILE="${IMAGE_FILE:-/var/lib/vz/template/iso/debian-${DEBIAN_RELEASE}-genericcloud-amd64.qcow2}"
 
-SNIPPET_DIR="/var/lib/vz/snippets"
+SNIPPET_DIR="${SNIPPET_DIR:-/var/lib/vz/snippets}"
 USERDATA_NAME="${VMNAME}-user-data.yaml"
 USERDATA_PATH="${SNIPPET_DIR}/${USERDATA_NAME}"
 
@@ -52,9 +52,18 @@ require_cmd() {
 # -----------------------------
 # Checks
 # -----------------------------
+require_cmd python3
+export VMID VMNAME STORAGE SNIPPET_STORAGE BRIDGE MEMORY_MB CORES DISK_GB CI_USER SSH_KEY_FILE
+export DEBIAN_RELEASE IMAGE_URL IMAGE_FILE SNIPPET_DIR
+PLAN_HELPER="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/vm_plan.py"
+if [[ "${1:-}" == "--plan" && "$#" -eq 1 ]]; then
+  exec python3 "$PLAN_HELPER"
+fi
+[[ "$#" -eq 0 ]] || fail "Option inconnue ; utiliser --plan pour un contrôle hors ligne."
+python3 "$PLAN_HELPER" --check || fail "Configuration refusée avant toute modification."
 [[ "$(id -u)" -eq 0 ]] || fail "Ce script doit être exécuté en root sur le host Proxmox."
 
-for cmd in qm pvesm wget awk sed grep; do
+for cmd in qm pvesm wget awk sed grep sha256sum; do
   require_cmd "$cmd"
 done
 
@@ -62,11 +71,20 @@ if qm status "$VMID" >/dev/null 2>&1; then
   fail "Le VMID ${VMID} existe déjà."
 fi
 
+[[ ! -e "$USERDATA_PATH" && ! -L "$USERDATA_PATH" ]] || fail "Cloud-init cible existant ; aucun écrasement autorisé."
+[[ ! -L "$IMAGE_FILE" && ( ! -e "$IMAGE_FILE" || -f "$IMAGE_FILE" ) ]] || fail "Cache image non régulier ou lien refusé."
+for checked_dir in "$(dirname "$IMAGE_FILE")" "$SNIPPET_DIR"; do
+  [[ ! -L "$checked_dir" ]] || fail "Répertoire cible symbolique refusé."
+done
+
 pvesm status | awk '{print $1}' | grep -qx "$STORAGE" || fail "Storage '${STORAGE}' introuvable."
 pvesm status | awk '{print $1}' | grep -qx "$SNIPPET_STORAGE" || fail "Snippet storage '${SNIPPET_STORAGE}' introuvable."
 
+python3 "$PLAN_HELPER" --check-paths || fail "Métadonnées des chemins refusées."
+
 mkdir -p "$(dirname "$IMAGE_FILE")"
 mkdir -p "$SNIPPET_DIR"
+python3 "$PLAN_HELPER" --check-paths || fail "Chemin modifié ou non fiable après création des répertoires."
 
 # -----------------------------
 # SSH key
@@ -74,6 +92,11 @@ mkdir -p "$SNIPPET_DIR"
 SSH_KEY=""
 if [[ -f "$SSH_KEY_FILE" ]]; then
   SSH_KEY="$(head -n1 "$SSH_KEY_FILE")"
+  case "$SSH_KEY" in
+    ssh-ed25519\ *|ssh-rsa\ *|ecdsa-sha2-nistp256\ *|ecdsa-sha2-nistp384\ *|ecdsa-sha2-nistp521\ *|sk-ssh-ed25519@openssh.com\ *|sk-ecdsa-sha2-nistp256@openssh.com\ *)
+      SSH_KEY="$(printf '%s\n' "$SSH_KEY" | awk '{print $1 " " $2}')" ;;
+    *) fail "Une ligne de clé SSH publique sans options est requise ; contenu non affiché." ;;
+  esac
 fi
 
 if [[ -z "$SSH_KEY" ]]; then
@@ -86,9 +109,28 @@ fi
 # -----------------------------
 if [[ ! -f "$IMAGE_FILE" ]]; then
   log "Téléchargement de l'image Debian ${DEBIAN_RELEASE}..."
-  wget -O "$IMAGE_FILE" "$IMAGE_URL"
+  IMAGE_PENDING="$(mktemp "${IMAGE_FILE}.pending.XXXXXX")"
+  if ! wget -q -O "$IMAGE_PENDING" "$IMAGE_URL"; then
+    rm -f -- "$IMAGE_PENDING"
+    fail "Téléchargement image interrompu ; cible finale préservée."
+  fi
+  if [[ -n "${IMAGE_SHA256:-}" ]] && [[ "$(sha256sum "$IMAGE_PENDING" | awk '{print $1}')" != "$IMAGE_SHA256" ]]; then
+    rm -f -- "$IMAGE_PENDING"
+    fail "Empreinte image incorrecte ; aucun disque importé."
+  fi
+  # Link publication is exclusive: never replace a concurrent/existing cache.
+  if ! ln -- "$IMAGE_PENDING" "$IMAGE_FILE"; then
+    rm -f -- "$IMAGE_PENDING"
+    fail "Cache image apparu pendant le téléchargement ; préservé."
+  fi
+  rm -f -- "$IMAGE_PENDING"
 else
   log "Image Debian déjà présente: ${IMAGE_FILE}"
+fi
+if [[ -n "${IMAGE_SHA256:-}" ]]; then
+  [[ "$(sha256sum "$IMAGE_FILE" | awk '{print $1}')" == "$IMAGE_SHA256" ]] || fail "Empreinte du cache image incorrecte."
+else
+  log "IMAGE_SHA256 absent : intégrité/version de l'image NOT VERIFIED."
 fi
 
 # -----------------------------
@@ -96,7 +138,8 @@ fi
 # -----------------------------
 log "Création du cloud-init..."
 
-cat > "$USERDATA_PATH" <<EOF
+# Atomic no-clobber creation; a prior file or symlink is never truncated.
+( set -o noclobber; cat > "$USERDATA_PATH" <<EOF
 #cloud-config
 hostname: ${VMNAME}
 manage_etc_hosts: true
@@ -110,6 +153,7 @@ users:
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL
 EOF
+) || fail "Cloud-init existant ou non inscriptible ; aucun écrasement."
 
 if [[ -n "$SSH_KEY" ]]; then
 cat >> "$USERDATA_PATH" <<EOF
@@ -180,11 +224,11 @@ runcmd:
   - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
   # Ensure user has Docker access
-  - usermod -aG docker ${CI_USER}
+  - usermod -aG docker __PEPEUCH_CI_USER__
 
   # Prepare project directories
-  - mkdir -p /opt/pepeuch-ai/{compose,models,data,logs,cache}
-  - chown -R ${CI_USER}:${CI_USER} /opt/pepeuch-ai
+  - mkdir -p /opt/pepeuch-ai/compose /opt/pepeuch-ai/models /opt/pepeuch-ai/data /opt/pepeuch-ai/logs /opt/pepeuch-ai/cache
+  - chown -R __PEPEUCH_CI_USER__:__PEPEUCH_CI_USER__ /opt/pepeuch-ai
 
   # Create initial compose placeholder
   - |
@@ -195,12 +239,14 @@ runcmd:
         command: ["sh", "-c", "echo 'Pepeuch AI VM ready'; sleep infinity"]
         restart: unless-stopped
     COMPOSE
-  - chown -R ${CI_USER}:${CI_USER} /opt/pepeuch-ai/compose
+  - chown -R __PEPEUCH_CI_USER__:__PEPEUCH_CI_USER__ /opt/pepeuch-ai/compose
 
 final_message: |
   Pepeuch AI VM bootstrap terminé.
   GPU passthrough et NVIDIA Container Toolkit restent à configurer après installation physique du GPU.
 EOF
+# CI_USER has already been restricted to a plain POSIX account name.
+sed -i "s/__PEPEUCH_CI_USER__/${CI_USER}/g" "$USERDATA_PATH"
 
 # -----------------------------
 # Create VM
@@ -231,8 +277,8 @@ log "Import du disque système..."
 qm importdisk "$VMID" "$IMAGE_FILE" "$STORAGE"
 
 # Find imported disk volume
-IMPORT_VOL="$(pvesm list "$STORAGE" --vmid "$VMID" | awk '/vm-'"$VMID"'-disk-/ {print $1}' | tail -n1)"
-[[ -n "$IMPORT_VOL" ]] || fail "Impossible de retrouver le disque importé."
+IMPORT_VOL="$(qm config "$VMID" | awk '/^unused[0-9]+:/ {split($2,a,","); print a[1]}')"
+[[ "$(printf '%s\n' "$IMPORT_VOL" | wc -l)" -eq 1 && "$IMPORT_VOL" == "$STORAGE":* && "$IMPORT_VOL" == *vm-"$VMID"-* ]] || fail "Disque importé absent ou ambigu ; VM conservée pour inspection."
 
 qm set "$VMID" --scsi0 "${IMPORT_VOL},discard=on,ssd=1,iothread=1"
 qm resize "$VMID" scsi0 "${DISK_GB}G"

@@ -1,0 +1,44 @@
+{
+  "format": "pepeuch-ai.db-comparison-corpus/v1",
+  "data_kind": "synthetic",
+  "nodes": {
+    "providers": [{"id": "p1"}, {"id": "p2"}],
+    "models": [
+      {"id": "m1", "provider": "p1", "name": "alpha-chat", "embedding": [1, 0]},
+      {"id": "m2", "provider": "p2", "name": "beta-chat", "embedding": [0.8, 0.6]},
+      {"id": "m3", "provider": "p1", "name": "gamma-code", "embedding": [0, 1]}
+    ],
+    "variants": [
+      {"id": "v1", "model": "m1", "vram_gb": 6},
+      {"id": "v2", "model": "m1", "vram_gb": 24},
+      {"id": "v3", "model": "m2", "vram_gb": 10},
+      {"id": "v4", "model": "m3", "vram_gb": 8}
+    ],
+    "runtimes": [{"id": "r1", "kind": "cpu"}, {"id": "r2", "kind": "gpu"}],
+    "gpus": [{"id": "g1", "vram_gb": 12}, {"id": "g2", "vram_gb": 24}]
+  },
+  "edges": [
+    {"from": "v1", "type": "supports", "to": "r1"},
+    {"from": "v1", "type": "supports", "to": "r2"},
+    {"from": "v2", "type": "supports", "to": "r2"},
+    {"from": "v3", "type": "supports", "to": "r2"},
+    {"from": "v4", "type": "supports", "to": "r1"},
+    {"from": "v1", "type": "fits", "to": "g1"},
+    {"from": "v3", "type": "fits", "to": "g1"},
+    {"from": "v2", "type": "fits", "to": "g2"}
+  ],
+  "queries": {
+    "provider_models": {"provider": "p1", "sort": "id"},
+    "cpu_variants": {"runtime": "r1", "max_vram_gb": 12, "sort": "id"},
+    "typed_gpu_paths": {"gpu": "g1", "runtime": "r2", "edge_types": ["fits", "supports"], "sort": "id"},
+    "vector_exact": {"query": [1, 0], "metric": "cosine_similarity", "limit": 3, "tie_breaker": "id"},
+    "hybrid_exact": {"query": [1, 0], "term": "chat", "vector_weight": 0.75, "lexical_weight": 0.25, "limit": 3, "tie_breaker": "id"}
+  },
+  "expected": {
+    "provider_models": ["m1", "m3"],
+    "cpu_variants": ["v1", "v4"],
+    "typed_gpu_paths": ["m1", "m2"],
+    "vector_exact": [{"id": "m1", "score": 1.0}, {"id": "m2", "score": 0.8}, {"id": "m3", "score": 0.0}],
+    "hybrid_exact": [{"id": "m1", "score": 1.0}, {"id": "m2", "score": 0.85}, {"id": "m3", "score": 0.0}]
+  }
+}
