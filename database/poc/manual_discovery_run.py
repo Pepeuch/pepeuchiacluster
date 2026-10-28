@@ -15,11 +15,11 @@ import hmac
 
 from discovery_checkpoints import load_checkpoint, save_checkpoint, _directory
 from discovery_execution import execute_source
-from discovery_provenance import make_provenance, public_alias, validation_context
+from discovery_provenance import make_provenance, public_alias, publication_guard, validation_context
 from discovery_registry import DEFAULT_MANIFEST, FIXTURE_BINDINGS, discover_fixtures
 from execution_models import ExecutionPolicy, ExecutionRuntime, ResourceRef, SourceObservation, SourceTask, Status
 from metadata_primitives import copy_metadata, strict_json_loads
-from validated_discovery_cache import cache_request, make_cache
+from validated_discovery_cache import cache_request, make_cache, validate_cache
 
 
 FORMAT = "pepeuch-ai.manual-discovery-run/v1"
@@ -62,6 +62,11 @@ def run_manual(tasks, *, runtime, archive, contexts, now, max_age_seconds,
     if set(contexts) != {t.source for t in tasks}:
         raise ValueError("Explicit context for every source required")
     contexts = {s: validation_context(c) for s, c in contexts.items()}
+    authorize = getattr(trusted_issuers, "authorize", None)
+    if authorize is not None:
+        for task in tasks:
+            if not task.synthetic:
+                authorize(issuer, task.source, contexts[task.source], key=key)
     resume = copy_metadata({} if resume is None else resume)
     if not isinstance(resume, dict) or set(resume) - set(contexts):
         raise ValueError("Resume contains unplanned sources")
@@ -93,6 +98,9 @@ def run_manual(tasks, *, runtime, archive, contexts, now, max_age_seconds,
         source = task.source
         if source in cached:
             entry, age = cached[source]
+            # A previous callback can revoke trust after the initial resume
+            # preflight. Never publish a cached descriptor using stale approval.
+            entry = validate_cache(entry, trusted_issuers=trusted_issuers)
             event = {"source": source, "status": "resumed_cached", "complete": True,
                      "snapshot_id": entry["snapshot"]["snapshot_id"], "captured_at": entry["snapshot"]["captured_at"],
                      "age_seconds": age, "remote_revalidated": False, "resume": resume[source], "execution": None}
@@ -117,9 +125,14 @@ def run_manual(tasks, *, runtime, archive, contexts, now, max_age_seconds,
                 identity = save_checkpoint(archive, entry, trusted_issuers=trusted_issuers)
                 event.update(snapshot_id=snapshot["snapshot_id"], captured_at=snapshot["captured_at"], age_seconds=age,
                              resume={"request": request, "identity": identity})
-        events.append(copy_metadata(event))
-        if on_event is not None:
-            on_event(copy_metadata(event))
+        with publication_guard(trusted_issuers):
+            if event["complete"]:
+                validate_cache(entry, trusted_issuers=trusted_issuers)
+                if authorize is not None and not task.synthetic:
+                    authorize(issuer, source, contexts[source], key=key)
+            events.append(copy_metadata(event))
+            if on_event is not None:
+                on_event(copy_metadata(event))
     return {"format": FORMAT, "complete": all(e["complete"] for e in events),
             "requested_sources": [t.source for t in tasks], "sources": events,
             "data_kind": "synthetic" if all(t.synthetic for t in tasks) else "controlled_or_mixed",

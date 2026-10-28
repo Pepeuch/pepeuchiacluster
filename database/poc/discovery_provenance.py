@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import re
+from contextlib import nullcontext
 
 from discovery_cache import canonical_json, digest, validate_snapshot
 from metadata_primitives import copy_metadata
@@ -16,6 +17,11 @@ from metadata_primitives import copy_metadata
 
 FORMAT = "pepeuch-ai.discovery-provenance/v1"
 KINDS = frozenset({"synthetic", "controlled_observation", "historical_unknown"})
+
+
+def publication_guard(trusted_issuers):
+    guard = getattr(trusted_issuers, "publication_guard", None)
+    return nullcontext() if guard is None else guard()
 
 
 def public_alias(value):
@@ -89,7 +95,8 @@ def validate_provenance(snapshot, provenance, *, trusted_issuers=None):
     if p["format"] != FORMAT or p["kind"] not in KINDS:
         raise ValueError("Unknown provenance contract")
     context = validation_context(p["context"])
-    if p["snapshot_id"] != data["snapshot_id"] or p["snapshot_sha256"] != digest(data) or p["scope"] != data["scope"]:
+    if (p["snapshot_id"] != data["snapshot_id"] or p["snapshot_sha256"] != digest(data)
+            or canonical_json(p["scope"]) != canonical_json(data["scope"])):
         raise ValueError("Provenance does not bind this complete snapshot")
     if p["kind"] == "controlled_observation":
         issuer = public_alias(p["issuer"])
@@ -100,12 +107,20 @@ def validate_provenance(snapshot, provenance, *, trusted_issuers=None):
         if (not isinstance(p["attestation"], str) or re.fullmatch(r"[0-9a-f]{64}", p["attestation"]) is None
                 or not hmac.compare_digest(p["attestation"], expected["attestation"])):
             raise ValueError("Invalid local attestation")
+        authorize = getattr(trusted_issuers, "authorize_snapshot", None)
+        if authorize is not None:
+            authorize(issuer, data, context)
     elif p["issuer"] is not None or p["attestation"] is not None:
         raise ValueError("Unexpected attestation")
     return p
 
 
 def emit_protected(snapshot, provenance, *, trusted_issuers, engine, stream):
+    with publication_guard(trusted_issuers):
+        return _emit_protected(snapshot, provenance, trusted_issuers=trusted_issuers, engine=engine, stream=stream)
+
+
+def _emit_protected(snapshot, provenance, *, trusted_issuers, engine, stream):
     """Explicit opt-in SQL GENERATOR only. Never connects to a database.
 
     Buffer the entire legacy output so any rejection leaves the stream untouched.
@@ -123,3 +138,38 @@ def emit_protected(snapshot, provenance, *, trusted_issuers, engine, stream):
     buffer = io.StringIO()
     (emit_pg if engine == "pg" else emit_surreal)(data, buffer)
     stream.write(buffer.getvalue())
+
+
+def emit_protected_transition(before, after, *, context, trusted_issuers, engine, stream):
+    with publication_guard(trusted_issuers):
+        return _emit_protected_transition(before, after, context=context, trusted_issuers=trusted_issuers, engine=engine, stream=stream)
+
+
+def _emit_protected_transition(before, after, *, context, trusted_issuers, engine, stream):
+    """Opt-in CAS SQL generation from TWO trusted complete cache observations.
+
+    Context is a caller-supplied target binding, NOT verification of a database
+    partition. Private/multi-account storage remains unqualified and refused.
+    No trust enrollment, connection, import or legacy fallback is performed.
+    """
+    import io
+    from emit_discovery_import import emit_pg, emit_surreal
+    from incremental_import_plan import plan_import
+    from validated_discovery_cache import validate_cache
+
+    context = validation_context(context)
+    if context["account_partition"] != "anonymous":
+        raise ValueError("Private account storage isolation is not qualified")
+    current = validate_cache(after, trusted_issuers=trusted_issuers)
+    previous = None if before is None else validate_cache(before, trusted_issuers=trusted_issuers)
+    for entry in (current,) if previous is None else (previous, current):
+        if (entry["provenance"]["kind"] != "controlled_observation"
+                or entry["request"]["context"] != context):
+            raise ValueError("Matching controlled provenance and explicit target context required")
+    if engine not in {"pg", "surreal"}:
+        raise ValueError("Explicit import engine required")
+    plan_import(previous, current, trusted_issuers=trusted_issuers)
+    output = io.StringIO()
+    (emit_pg if engine == "pg" else emit_surreal)(
+        current["snapshot"], output, expected_snapshot=None if previous is None else previous["snapshot"])
+    stream.write(output.getvalue())

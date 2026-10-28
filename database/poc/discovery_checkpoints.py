@@ -17,6 +17,7 @@ import stat
 from discovery_cache import canonical_json, digest
 from metadata_primitives import copy_metadata, strict_json_loads
 from validated_discovery_cache import _request, validate_cache
+from discovery_provenance import publication_guard
 
 
 FORMAT = "pepeuch-ai.discovery-checkpoint/v1"
@@ -90,6 +91,11 @@ def _writer(directory):
 
 
 def save_checkpoint(root, entry, *, trusted_issuers=None):
+    with publication_guard(trusted_issuers):
+        return _save_checkpoint(root, entry, trusted_issuers=trusted_issuers)
+
+
+def _save_checkpoint(root, entry, *, trusted_issuers=None):
     # Complete validation BEFORE any filesystem mutation. Detach caller data.
     entry = validate_cache(entry, trusted_issuers=trusted_issuers)
     request_hash, entry_hash = digest(entry["request"]), digest(entry)
