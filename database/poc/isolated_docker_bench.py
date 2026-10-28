@@ -304,7 +304,11 @@ def main():
     parser.add_argument("--execute", action="store_true", help="Explicit isolated-bench authorization required")
     parser.add_argument("--qualification-only", action="store_true",
                         help="Only synthetic B2 replay/restore qualification; no performance campaign")
+    parser.add_argument("--cas-only", action="store_true",
+                        help="Only synthetic concurrent CAS qualification; no restore or performance run")
     args = parser.parse_args()
+    if args.cas_only and args.qualification_only:
+        parser.error("Choose one qualification mode")
     root = args.root
     if (root.parent != Path("/var/tmp") or not re.fullmatch(r"pepeuch-dbbench-[a-z0-9-]{12,64}", root.name)
             or root.is_symlink() or not root.is_dir() or root.stat().st_mode & 0o077):
@@ -330,11 +334,17 @@ def main():
             if item["State"]["Running"]:
                 raise ValueError("Campaign containers unexpectedly already running")
             docker("start", item["Id"])
-        from isolated_bench_runtime import run
+        if args.cas_only:
+            from isolated_cas_qualification import run
+        else:
+            from isolated_bench_runtime import run
         monitor = Monitor(root, objects)
         monitor.sample()
         monitor.thread.start()
-        outcome.update(run(root, attempt, objects, monitor, qualification_only=args.qualification_only))
+        if args.cas_only:
+            outcome.update(run(root, attempt, objects, monitor))
+        else:
+            outcome.update(run(root, attempt, objects, monitor, qualification_only=args.qualification_only))
         monitor.check()
         outcome["status"] = "VERIFIED"
     except BaseException as exc:

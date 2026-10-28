@@ -8,7 +8,7 @@ rejects older observations and conflicting observations at the same instant.
 
 from __future__ import annotations
 
-from metadata_primitives import error_summary, strict_json_loads
+from metadata_primitives import copy_metadata, error_summary, strict_json_loads
 
 import argparse
 import csv
@@ -20,6 +20,7 @@ import sys
 from typing import Any, TextIO
 
 from discovery_cache import canonical_json, validate_snapshot
+from discovery_import_contract import validate_transition
 
 
 PG_COLUMNS = (
@@ -30,6 +31,7 @@ PG_COLUMNS = (
 
 # Budget for the complete transaction, measured as UTF-8 (never split/truncate).
 MAX_SURREAL_IMPORT_BYTES = 512 * 1024
+_NO_CAS = object()
 
 
 def observation_time(value: str) -> str:
@@ -48,10 +50,30 @@ def import_record(entry: dict[str, Any], snapshot: dict[str, Any]) -> dict[str, 
     }
 
 
-def emit_pg(snapshot: dict[str, Any], stream: TextIO) -> None:
+def _cas_baseline(snapshot, expected_snapshot):
+    if expected_snapshot is _NO_CAS:
+        return None
+    before, _ = validate_transition(expected_snapshot, snapshot)
+    keys = {r["record_key"] for r in snapshot["records"]}
+    return {} if before is None else {
+        r["record_key"]: import_record(r, before) for r in before["records"] if r["record_key"] in keys
+    }
+
+
+def _pg_copy_row(record, stream):
+    # PostgreSQL CSV: unquoted empty means NULL; quoted empty means ''. The
+    # default csv.writer would otherwise collapse these two revision values.
+    values = [canonical_json(record[field]) if field in ("attributes", "relationships", "raw_metadata")
+              else record[field] for field in PG_COLUMNS]
+    stream.write(",".join("" if value is None else '"'+value.replace('"', '""')+'"' for value in values)+"\n")
+
+
+def emit_pg(snapshot: dict[str, Any], stream: TextIO, *, expected_snapshot=_NO_CAS) -> None:
+    snapshot = copy_metadata(snapshot)
     validate_snapshot(snapshot)
+    baseline = _cas_baseline(snapshot, expected_snapshot)
     # Validate COPY fields before emitting even BEGIN to a direct caller.
-    for entry in snapshot["records"]:
+    for entry in snapshot["records"] + ([] if baseline is None else list(baseline.values())):
         for field in ("source", "entity_type", "source_id", "source_revision", "display_name"):
             value = entry.get(field)
             if isinstance(value, str) and ("\n" in value or "\r" in value):
@@ -70,13 +92,15 @@ def emit_pg(snapshot: dict[str, Any], stream: TextIO) -> None:
         record = import_record(entry, snapshot)
         # COPY FROM STDIN has a special end marker \. ; never permit a raw
         # text field to introduce an independent physical line of that form.
-        values = [
-            canonical_json(record[field]) if field in ("attributes", "relationships", "raw_metadata")
-            else (record[field] if record[field] is not None else "")
-            for field in PG_COLUMNS
-        ]
-        writer.writerow(values)
+        _pg_copy_row(record, stream)
     stream.write("\\.\n")
+    if baseline is not None:
+        stream.write("CREATE TEMP TABLE _discovery_expected (LIKE poc.discovery_cache INCLUDING DEFAULTS) ON COMMIT DROP;\n")
+        stream.write(f"COPY _discovery_expected ({columns}) FROM STDIN WITH (FORMAT csv, HEADER true);\n")
+        writer.writerow(PG_COLUMNS)
+        for record in baseline.values():
+            _pg_copy_row(record, stream)
+        stream.write("\\.\n")
     # Serialize the state check and writes, also protecting absent keys. This
     # lock conflicts with normal DML; it does not block plain SELECT readers.
     stream.write(
@@ -91,6 +115,20 @@ def emit_pg(snapshot: dict[str, Any], stream: TextIO) -> None:
         "  END IF;\n"
         "END $discovery_guard$;\n"
     )
+    if baseline is not None:
+        stream.write(
+            "DO $discovery_cas$ BEGIN\n"
+            "  IF EXISTS (SELECT 1 FROM _discovery_stage s\n"
+            "    LEFT JOIN poc.discovery_cache c USING (record_key)\n"
+            "    LEFT JOIN _discovery_expected e USING (record_key)\n"
+            "    WHERE NOT ((c.record_key IS NULL AND e.record_key IS NULL)\n"
+            "      OR (c.record_key IS NOT NULL AND\n"
+            "        (to_jsonb(c) IS NOT DISTINCT FROM to_jsonb(s)\n"
+            "         OR (e.record_key IS NOT NULL AND to_jsonb(c) IS NOT DISTINCT FROM to_jsonb(e)))))) THEN\n"
+            "    RAISE EXCEPTION 'Discovery CAS precondition failed';\n"
+            "  END IF;\n"
+            "END $discovery_cas$;\n"
+        )
     stream.write(
         f"INSERT INTO poc.discovery_cache ({columns})\n"
         f"SELECT {columns} FROM _discovery_stage WHERE true\n"
@@ -107,8 +145,10 @@ def emit_pg(snapshot: dict[str, Any], stream: TextIO) -> None:
     )
 
 
-def emit_surreal(snapshot: dict[str, Any], stream: TextIO) -> None:
+def emit_surreal(snapshot: dict[str, Any], stream: TextIO, *, expected_snapshot=_NO_CAS) -> None:
+    snapshot = copy_metadata(snapshot)
     validate_snapshot(snapshot)
+    baseline = _cas_baseline(snapshot, expected_snapshot)
     instant = canonical_json(observation_time(snapshot["captured_at"]))
     buffered = io.StringIO()
     buffered.write("OPTION IMPORT;\n")
@@ -130,6 +170,25 @@ def emit_surreal(snapshot: dict[str, Any], stream: TextIO) -> None:
             "    THROW 'Discovery observation is stale or conflicting';\n"
             "  };\n"
             "};\n"
+        )
+        if baseline is not None:
+            expected = baseline.get(record["record_key"])
+            prior = "false" if expected is None else (
+                f"($seen = <datetime> {canonical_json(observation_time(expected['last_seen_at']))} AND "
+                f"$payload = {canonical_json({k: v for k, v in expected.items() if k != 'last_seen_at'})})"
+            )
+            buffered.write(
+                ("IF $current != NONE {\n" if expected is None else
+                 "IF $current = NONE { THROW 'Discovery CAS precondition failed'; } ELSE {\n")
+                +
+                f"  LET $seen = <datetime> $current.last_seen_at;\n"
+                f"  LET $payload = (SELECT * OMIT id, last_seen_at FROM ONLY discovery_cache:{record['record_key']});\n"
+                f"  IF NOT (($seen = <datetime> {instant} AND $payload = {content}) OR {prior}) {{\n"
+                "    THROW 'Discovery CAS precondition failed';\n"
+                "  };\n"
+                "};\n"
+            )
+        buffered.write(
             f"UPSERT discovery_cache:{record['record_key']} "
             f"CONTENT {canonical_json(record)} RETURN NONE;\n"
         )

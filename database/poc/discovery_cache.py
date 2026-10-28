@@ -125,6 +125,11 @@ def _validate_time(value: str) -> None:
 def validate_snapshot(data: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(data, dict) or data.get("format") != FORMAT:
         raise ValueError("Unknown discovery snapshot format")
+    if set(data) != {"format", "snapshot_id", "captured_at", "scope", "records"}:
+        raise ValueError("Exact discovery snapshot envelope required")
+    # make_snapshot may choose a date when creating a NEW observation. A reader
+    # must never silently invent one for a missing/null persisted observation.
+    _validate_time(data["captured_at"])
     records = data.get("records")
     if not isinstance(records, list):
         raise ValueError("Snapshot records must be a list")
@@ -155,7 +160,7 @@ def validate_snapshot(data: dict[str, Any]) -> dict[str, Any]:
 def compare_snapshots(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
     validate_snapshot(before)
     validate_snapshot(after)
-    if before["scope"] != after["scope"]:
+    if canonical_json(before["scope"]) != canonical_json(after["scope"]):
         raise ValueError("Different collection scopes; cannot interpret missing records")
     old = {x["record_key"]: x for x in before["records"]}
     new = {x["record_key"]: x for x in after["records"]}

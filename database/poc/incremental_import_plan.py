@@ -7,7 +7,7 @@ The legacy_generators_guarded field concerns this complete CAS protocol only.
 
 from discovery_cache import compare_snapshots
 from metadata_primitives import copy_metadata
-from manual_discovery_run import timestamp
+from discovery_import_contract import validate_transition
 from validated_discovery_cache import validate_cache
 
 
@@ -22,12 +22,7 @@ def plan_import(before, after, *, trusted_issuers=None):
                 raise ValueError("Partition or selection changes need a separate reviewed baseline")
         if before["provenance"]["kind"] != after["provenance"]["kind"]:
             raise ValueError("Synthetic and controlled baselines cannot be mixed")
-        previous, current = before["snapshot"], after["snapshot"]
-        if timestamp(current["captured_at"]) < timestamp(previous["captured_at"]):
-            raise ValueError("Older capture cannot replace a newer baseline")
-        if (timestamp(current["captured_at"]) == timestamp(previous["captured_at"])
-                and current != previous):
-            raise ValueError("Conflicting observations at the same capture time")
+        previous, current = validate_transition(before["snapshot"], after["snapshot"])
         changes = compare_snapshots(previous, current)
         old = {r["record_key"]: r for r in previous["records"]}
     else:
